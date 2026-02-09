@@ -1,0 +1,82 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id            String    @id @default(uuid())
+  email         String    @unique
+  createdAt     DateTime  @default(now())
+  shadowScore   Int       @default(0)
+  isBanned      Boolean   @default(false)
+  
+  participations ThreadParticipant[]
+  submittedThreads Thread[]
+
+  @@map("users")
+}
+
+model Thread {
+  id          String   @id @default(uuid())
+  url         String   @unique
+  domain      String
+  title       String
+  imageUrl    String?
+  createdAt   DateTime @default(now())
+  
+  creatorId   String
+  creator     User     @relation(fields: [creatorId], references: [id])
+
+  comments     Comment[]
+  participants ThreadParticipant[]
+
+  @@index([domain])
+  @@map("threads")
+}
+
+model ThreadParticipant {
+  id          String   @id @default(uuid())
+  userId      String
+  threadId    String
+  pseudonym   String
+  avatarColor String
+  joinedAt    DateTime @default(now())
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  thread      Thread   @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  comments    Comment[]
+
+  @@unique([userId, threadId])
+  @@map("thread_participants")
+}
+
+model Comment {
+  id            String   @id @default(uuid())
+  content       String
+  createdAt     DateTime @default(now())
+  upvotes       Int      @default(0)
+  downvotes     Int      @default(0)
+  
+  participantId String
+  threadId      String
+  parentId      String?
+
+  participant   ThreadParticipant @relation(fields: [participantId], references: [id])
+  thread        Thread            @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  parent        Comment?          @relation("CommentReplies", fields: [parentId], references: [id])
+  replies       Comment[]         @relation("CommentReplies")
+
+  @@map("comments")
+}
+
+model WhitelistDomain {
+  id          String   @id @default(uuid())
+  domain      String   @unique
+  trustScore  Int      @default(100)
+  addedAt     DateTime @default(now())
+  
+  @@map("whitelist_domains")
+}
