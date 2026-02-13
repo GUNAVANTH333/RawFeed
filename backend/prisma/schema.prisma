@@ -10,12 +10,14 @@ model User {
   id            String    @id @default(uuid())
   email         String    @unique
   password      String
+  displayName   String?
   createdAt     DateTime  @default(now())
   shadowScore   Int       @default(0)
   isBanned      Boolean   @default(false)
-  
-  participations ThreadParticipant[]
+
+  participations   ThreadParticipant[]
   submittedThreads Thread[]
+  votes            Vote[]
 
   @@map("users")
 }
@@ -60,7 +62,7 @@ model Comment {
   createdAt     DateTime @default(now())
   upvotes       Int      @default(0)
   downvotes     Int      @default(0)
-  
+
   participantId String
   threadId      String
   parentId      String?
@@ -69,8 +71,24 @@ model Comment {
   thread        Thread            @relation(fields: [threadId], references: [id], onDelete: Cascade)
   parent        Comment?          @relation("CommentReplies", fields: [parentId], references: [id])
   replies       Comment[]         @relation("CommentReplies")
+  votes         Vote[]
 
   @@map("comments")
+}
+
+model Vote {
+  id        String   @id @default(uuid())
+  type      String
+  createdAt DateTime @default(now())
+
+  userId    String
+  commentId String
+
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  comment   Comment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, commentId])
+  @@map("votes")
 }
 
 model WhitelistDomain {
