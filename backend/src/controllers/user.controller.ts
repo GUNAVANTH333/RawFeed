@@ -1,3 +1,4 @@
+import { randomBytes } from "node:crypto";
 import type { Response } from "express";
 import jwt from "jsonwebtoken";
 import { UserService } from "../services/user.service.js";
@@ -35,7 +36,15 @@ export class UserController {
       res.cookie("token", token, {
         httpOnly: true,
         secure: process.env["NODE_ENV"] === "production",
-        sameSite: "strict",
+        sameSite: "lax",
+        maxAge: COOKIE_MAX_AGE,
+      });
+
+      const csrfToken = randomBytes(32).toString("hex");
+      res.cookie("csrf_token", csrfToken, {
+        httpOnly: false,
+        secure: process.env["NODE_ENV"] === "production",
+        sameSite: "lax",
         maxAge: COOKIE_MAX_AGE,
       });
 
@@ -83,7 +92,15 @@ export class UserController {
       res.cookie("token", token, {
         httpOnly: true,
         secure: process.env["NODE_ENV"] === "production",
-        sameSite: "strict",
+        sameSite: "lax",
+        maxAge: COOKIE_MAX_AGE,
+      });
+
+      const csrfToken = randomBytes(32).toString("hex");
+      res.cookie("csrf_token", csrfToken, {
+        httpOnly: false,
+        secure: process.env["NODE_ENV"] === "production",
+        sameSite: "lax",
         maxAge: COOKIE_MAX_AGE,
       });
 
@@ -124,7 +141,13 @@ export class UserController {
       res.clearCookie("token", {
         httpOnly: true,
         secure: process.env["NODE_ENV"] === "production",
-        sameSite: "strict",
+        sameSite: "lax",
+      });
+
+      res.clearCookie("csrf_token", {
+        httpOnly: false,
+        secure: process.env["NODE_ENV"] === "production",
+        sameSite: "lax",
       });
 
       res.status(200).json({ message: "Logged out successfully" });

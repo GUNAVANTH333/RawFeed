@@ -1,12 +1,14 @@
 import { Router } from "express";
 import { UserController } from "../controllers/user.controller.js";
 import { AuthMiddleware } from "../middlewares/auth.middleware.js";
+import { ValidateMiddleware } from "../middlewares/validate.middleware.js";
+import { RegisterSchema, LoginSchema } from "../utils/validators.js";
 
 const router = Router();
 const userController = new UserController();
 
-router.post("/register", userController.register);
-router.post("/login", userController.login);
+router.post("/register", ValidateMiddleware.body(RegisterSchema), userController.register);
+router.post("/login", ValidateMiddleware.body(LoginSchema), userController.login);
 router.get("/profile", AuthMiddleware.authenticate, userController.getProfile);
 router.post("/logout", userController.logout);
 
