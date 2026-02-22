@@ -1,0 +1,109 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme inline {
+  --color-primary: #0EA5E9;
+  --color-primary-dark: #0284C7;
+  --color-primary-light: #E0F2FE;
+  --color-verified-blue: #0EA5E9;
+  --color-accent-green: #10B981;
+  --color-accent-cyan: #06B6D4;
+
+  --color-bg-light: #F0F9FF;
+  --color-bg-dark: #0F172A;
+  --color-surface-light: #FFFFFF;
+  --color-surface-dark: #1E293B;
+
+  --font-display: "Inter", sans-serif;
+}
+
+:root {
+  --background: #F0F9FF;
+  --foreground: #0F172A;
+  --surface: #FFFFFF;
+  --surface-hover: #F8FAFC;
+  --border: #BAE6FD;
+  --border-subtle: #E2E8F0;
+  --text-primary: #0F172A;
+  --text-secondary: #475569;
+  --text-muted: #64748B;
+}
+
+.dark {
+  --background: #0F172A;
+  --foreground: #F1F5F9;
+  --surface: #1E293B;
+  --surface-hover: #334155;
+  --border: #334155;
+  --border-subtle: #1E293B;
+  --text-primary: #F1F5F9;
+  --text-secondary: #94A3B8;
+  --text-muted: #64748B;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #BAE6FD transparent;
+}
+
+.dark * {
+  scrollbar-color: #334155 transparent;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #BAE6FD;
+  border-radius: 4px;
+}
+.dark ::-webkit-scrollbar-thumb {
+  background: #334155;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #7DD3FC;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-display);
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.thread-line {
+  position: absolute;
+  top: 48px;
+  bottom: -24px;
+  left: 20px;
+  width: 2px;
+  background-color: var(--border);
+  z-index: 0;
+}
+
+.thread-line-curved {
+  position: absolute;
+  top: -24px;
+  left: -26px;
+  width: 32px;
+  height: 48px;
+  border-bottom-left-radius: 12px;
+  border-left: 2px solid var(--border);
+  border-bottom: 2px solid var(--border);
+  z-index: 0;
+}
+
+.fill-1 {
+  font-variation-settings: 'FILL' 1;
+}
