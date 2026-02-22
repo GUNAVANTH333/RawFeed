@@ -1,0 +1,17 @@
+{
+	"folders": [
+		{
+			"path": "../../.."
+		},
+		{
+			"path": "../../../../stitch_rawfeed_thread_conversation/stitch_rawfeed_thread_conversation/new_thread"
+		},
+		{
+			"path": "../../../../stitch_rawfeed_thread_conversation/stitch_rawfeed_thread_conversation/notifications"
+		},
+		{
+			"path": "../../../../stitch_rawfeed_thread_conversation/stitch_rawfeed_thread_conversation/settings"
+		}
+	],
+	"settings": {}
+}
