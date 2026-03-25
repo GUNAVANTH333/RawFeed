@@ -15,9 +15,9 @@ export class ThreadService {
     const thread = await prisma.thread.create({
       data: {
         title: data.title,
-        url: data.url ?? "",
-        domain: data.domain ?? "user-submitted",
-        imageUrl: data.imageUrl ?? null,
+        url: data.url || null,
+        domain: data.domain || null,
+        imageUrl: data.imageUrl || null,
         creatorId: userId,
       },
     });
@@ -34,7 +34,7 @@ export class ThreadService {
     };
   };
 
-  getAllThreads = async (page: number = 1, limit: number = 20) => {
+  getAllThreads = async (page: number = 1, limit: number = 20, userId?: string) => {
     const skip = (page - 1) * limit;
 
     const [threads, total] = await Promise.all([
@@ -43,14 +43,20 @@ export class ThreadService {
         take: limit,
         orderBy: { createdAt: "desc" },
         include: {
-          _count: { select: { comments: true, participants: true } },
+          _count: { select: { comments: true, participants: true, likes: true } },
+          likes: userId ? { where: { userId }, select: { id: true } } : false,
         },
       }),
       prisma.thread.count(),
     ]);
 
     return {
-      threads,
+      threads: threads.map((t) => ({
+        ...t,
+        likeCount: t._count.likes,
+        isLiked: userId ? t.likes.length > 0 : false,
+        likes: undefined,
+      })),
       pagination: {
         page,
         limit,
@@ -65,38 +71,91 @@ export class ThreadService {
       where: { id: threadId },
       include: {
         participants: {
-          select: {
-            id: true,
-            pseudonym: true,
-            avatarColor: true,
-            joinedAt: true,
-          },
+          select: { id: true, pseudonym: true, avatarColor: true, joinedAt: true },
         },
-        _count: { select: { comments: true } },
+        _count: { select: { comments: true, likes: true } },
+        likes: userId ? { where: { userId }, select: { id: true } } : false,
       },
     });
 
-    if (!thread) {
-      return null;
-    }
+    if (!thread) return null;
 
     let myParticipant = null;
     if (userId) {
       myParticipant = await prisma.threadParticipant.findUnique({
-        where: {
-          userId_threadId: { userId, threadId },
-        },
-        select: {
-          pseudonym: true,
-          avatarColor: true,
-        },
+        where: { userId_threadId: { userId, threadId } },
+        select: { pseudonym: true, avatarColor: true },
       });
     }
 
     return {
       ...thread,
+      likeCount: thread._count.likes,
+      isLiked: userId ? thread.likes.length > 0 : false,
+      likes: undefined,
       myPseudonym: myParticipant?.pseudonym ?? null,
       myAvatarColor: myParticipant?.avatarColor ?? null,
     };
+  };
+
+  deleteThread = async (threadId: string, userId: string) => {
+    const thread = await prisma.thread.findUnique({
+      where: { id: threadId },
+      select: { creatorId: true },
+    });
+
+    if (!thread) {
+      throw new Error("NOT_FOUND");
+    }
+
+    if (thread.creatorId !== userId) {
+      throw new Error("FORBIDDEN");
+    }
+
+    await prisma.thread.delete({ where: { id: threadId } });
+  };
+
+  updateThread = async (
+    threadId: string,
+    userId: string,
+    data: { title?: string; url?: string; imageUrl?: string }
+  ) => {
+    const thread = await prisma.thread.findUnique({
+      where: { id: threadId },
+      select: { creatorId: true },
+    });
+
+    if (!thread) throw new Error("NOT_FOUND");
+    if (thread.creatorId !== userId) throw new Error("FORBIDDEN");
+
+    const updated = await prisma.thread.update({
+      where: { id: threadId },
+      data: {
+        ...(data.title !== undefined && { title: data.title }),
+        ...(data.url !== undefined && { url: data.url }),
+        ...(data.imageUrl !== undefined && { imageUrl: data.imageUrl }),
+      },
+    });
+
+    return updated;
+  };
+
+  toggleLike = async (threadId: string, userId: string) => {
+    const existing = await prisma.threadLike.findUnique({
+      where: { userId_threadId: { userId, threadId } },
+    });
+
+    if (existing) {
+      await prisma.threadLike.delete({
+        where: { userId_threadId: { userId, threadId } },
+      });
+    } else {
+      await prisma.threadLike.create({
+        data: { userId, threadId },
+      });
+    }
+
+    const likeCount = await prisma.threadLike.count({ where: { threadId } });
+    return { liked: !existing, likeCount };
   };
 }

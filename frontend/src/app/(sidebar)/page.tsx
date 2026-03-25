@@ -1,15 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
-import { getThreads, type Thread, type Pagination } from "@/lib/api";
+import { getThreads, likeThread, type Thread, type Pagination } from "@/lib/api";
+import { useAuth } from "@/lib/AuthContext";
 
 const categories = ["For You", "Global News", "Tech & Science", "Finance"];
-
-const trendingTopics = [
-  { tag: "#Politics", title: "Senate Bill 402", count: "12.5k discussions" },
-  { tag: "#Tech", title: "OpenAI Dev Day", count: "8.2k discussions" },
-];
 
 function timeAgo(dateStr: string) {
   const diff = Date.now() - new Date(dateStr).getTime();
@@ -22,6 +18,7 @@ function timeAgo(dateStr: string) {
 }
 
 export default function HomePage() {
+  const { user } = useAuth();
   const [threads, setThreads] = useState<Thread[]>([]);
   const [pagination, setPagination] = useState<Pagination | null>(null);
   const [activeCategory, setActiveCategory] = useState("For You");
@@ -35,7 +32,53 @@ export default function HomePage() {
       })
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, []);
+  }, [user]);
+
+  const handleLike = useCallback(async (e: React.MouseEvent, threadId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (!user) {
+      alert("Please sign in to like threads.");
+      return;
+    }
+
+    // Optimistic UI update
+    setThreads((prev) =>
+      prev.map((t) => {
+        if (t.id === threadId) {
+          return {
+            ...t,
+            isLiked: !t.isLiked,
+            likeCount: t.isLiked ? t.likeCount - 1 : t.likeCount + 1,
+          };
+        }
+        return t;
+      })
+    );
+
+    try {
+      const { liked, likeCount } = await likeThread(threadId);
+      // Ensure backend sync
+      setThreads((prev) =>
+        prev.map((t) => (t.id === threadId ? { ...t, isLiked: liked, likeCount } : t))
+      );
+    } catch {
+      // Revert optimistic update on failure
+      setThreads((prev) =>
+        prev.map((t) => {
+          if (t.id === threadId) {
+            return {
+              ...t,
+              isLiked: !t.isLiked,
+              likeCount: !t.isLiked ? t.likeCount - 1 : t.likeCount + 1,
+            };
+          }
+          return t;
+        })
+      );
+    }
+  }, [user]);
 
   return (
     <>
@@ -114,80 +157,73 @@ export default function HomePage() {
                 <p className="text-sm mt-1" style={{ color: "var(--text-muted)" }}>Be the first to start a discussion</p>
               </div>
             ) : (
-              threads.map((thread) => (
-                <Link key={thread.id} href={`/threads/${thread.id}`}>
-                  <article
-                    className="rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-300 cursor-pointer"
-                    style={{ background: "var(--surface)", border: "1px solid var(--border-subtle)" }}
-                  >
-                    {thread.imageUrl && (
-                      <div className="relative h-64 w-full overflow-hidden group">
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent z-10"></div>
-                        <div
-                          className="w-full h-full bg-cover bg-center transition-transform duration-700 group-hover:scale-105"
-                          style={{ backgroundImage: `url('${thread.imageUrl}')` }}
-                        ></div>
-                        {thread.domain && thread.domain !== "user-submitted" && (
-                          <div className="absolute top-4 left-4 z-20 flex items-center gap-1.5 bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10">
-                            <span className="material-symbols-outlined text-primary text-[16px] fill-1">verified_user</span>
-                            <span className="text-white text-xs font-semibold tracking-wide uppercase">{thread.domain}</span>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                    <div className="p-6">
-                      <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>
-                          <span className="text-primary">{thread.domain || "Discussion"}</span>
-                          <span className="size-1 rounded-full" style={{ background: "var(--text-muted)" }}></span>
-                          <span>{timeAgo(thread.createdAt)}</span>
+              threads.map((thread) => {
+                return (
+                  <Link key={thread.id} href={`/threads/${thread.id}`}>
+                    <article
+                      className="rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-300 cursor-pointer"
+                      style={{ background: "var(--surface)", border: "1px solid var(--border-subtle)" }}
+                    >
+                      {thread.imageUrl && (
+                        <div className="relative h-64 w-full overflow-hidden group">
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent z-10"></div>
+                          <div
+                            className="w-full h-full bg-cover bg-center transition-transform duration-700 group-hover:scale-105"
+                            style={{ backgroundImage: `url('${thread.imageUrl}')` }}
+                          ></div>
                         </div>
-                        <button
-                          className="hover:text-primary transition-colors"
-                          style={{ color: "var(--text-muted)" }}
-                          onClick={(e) => e.preventDefault()}
-                        >
-                          <span className="material-symbols-outlined text-[20px]">more_horiz</span>
-                        </button>
-                      </div>
-                      <h3 className="text-2xl font-bold mb-2 leading-tight hover:text-primary transition-colors" style={{ color: "var(--text-primary)" }}>
-                        {thread.title}
-                      </h3>
-                      {thread.url && (
-                        <p className="text-sm line-clamp-2 mb-4 leading-relaxed" style={{ color: "var(--text-secondary)" }}>
-                          {thread.url}
-                        </p>
                       )}
-                      <div className="flex items-center justify-between pt-4" style={{ borderTop: "1px solid var(--border-subtle)" }}>
-                        <div className="flex items-center gap-3">
-                          <div className="size-8 rounded relative overflow-hidden ring-2" style={{ background: "var(--surface-hover)", "--tw-ring-color": "var(--surface)" } as React.CSSProperties}>
-                            <div className="absolute inset-0 bg-[conic-gradient(from_90deg_at_50%_50%,_#BAE6FD_0%,_#38BDF8_50%,_#BAE6FD_100%)]"></div>
-                          </div>
-                          <span className="text-sm font-semibold" style={{ color: "var(--text-secondary)" }}>
-                            {thread.myPseudonym || "Anonymous"}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-4">
-                          <div className="flex items-center gap-1 rounded-lg px-2 py-1" style={{ background: "var(--surface-hover)" }}>
-                            <span className="material-symbols-outlined text-[18px]" style={{ color: "var(--text-muted)" }}>arrow_upward</span>
-                            <span className="text-xs font-bold min-w-[20px] text-center" style={{ color: "var(--text-secondary)" }}>
-                              {thread._count?.comments || 0}
+                      <div className="p-6">
+                        <h3 className="text-2xl font-bold mb-2 leading-tight hover:text-primary transition-colors" style={{ color: "var(--text-primary)" }}>
+                          {thread.title}
+                        </h3>
+                        {thread.url && (
+                          <p className="text-sm line-clamp-2 mb-4 leading-relaxed" style={{ color: "var(--text-secondary)" }}>
+                            {thread.url}
+                          </p>
+                        )}
+                        <div className="flex items-center justify-between pt-4" style={{ borderTop: "1px solid var(--border-subtle)" }}>
+                          <div className="flex items-center gap-3">
+                            <div className="size-8 rounded relative overflow-hidden ring-2" style={{ background: "var(--surface-hover)", "--tw-ring-color": "var(--surface)" } as React.CSSProperties}>
+                              <div className="absolute inset-0 bg-[conic-gradient(from_90deg_at_50%_50%,_#BAE6FD_0%,_#38BDF8_50%,_#BAE6FD_100%)]"></div>
+                            </div>
+                            <span className="text-sm font-semibold" style={{ color: "var(--text-secondary)" }}>
+                              {thread.myPseudonym || "Anonymous"}
                             </span>
-                            <span className="material-symbols-outlined text-[18px]" style={{ color: "var(--text-muted)" }}>arrow_downward</span>
                           </div>
-                          <div className="flex items-center gap-1.5" style={{ color: "var(--text-muted)" }}>
-                            <span className="material-symbols-outlined text-[18px]">chat_bubble</span>
-                            <span className="text-xs font-medium">{thread._count?.comments || 0}</span>
+                          <div className="flex items-center gap-4">
+                            {/* Like button */}
+                            <button
+                              onClick={(e) => handleLike(e, thread.id)}
+                              className="flex items-center gap-1.5 transition-colors group"
+                              style={{ color: thread.isLiked ? "var(--color-primary)" : "var(--text-muted)" }}
+                              aria-label={thread.isLiked ? "Unlike" : "Like"}
+                            >
+                              <span
+                                className={`material-symbols-outlined text-[20px] transition-transform group-hover:scale-110 ${thread.isLiked ? "fill-1" : ""}`}
+                              >
+                                favorite
+                              </span>
+                              {thread.likeCount > 0 && (
+                                <span className="text-xs font-medium">{thread.likeCount}</span>
+                              )}
+                            </button>
+                            {/* Comment count */}
+                            <div className="flex items-center gap-1.5" style={{ color: "var(--text-muted)" }}>
+                              <span className="material-symbols-outlined text-[18px]">chat_bubble</span>
+                              <span className="text-xs font-medium">{thread._count?.comments || 0}</span>
+                            </div>
+                            <button style={{ color: "var(--text-muted)" }} className="hover:text-primary transition-colors" onClick={(e) => e.preventDefault()}>
+                              <span className="material-symbols-outlined text-[18px]">ios_share</span>
+                            </button>
+                            <span className="text-xs font-medium" style={{ color: "var(--text-muted)" }}>{timeAgo(thread.createdAt)}</span>
                           </div>
-                          <button style={{ color: "var(--text-muted)" }} className="hover:text-primary transition-colors" onClick={(e) => e.preventDefault()}>
-                            <span className="material-symbols-outlined text-[18px]">ios_share</span>
-                          </button>
                         </div>
                       </div>
-                    </div>
-                  </article>
-                </Link>
-              ))
+                    </article>
+                  </Link>
+                );
+              })
             )}
 
             {/* Loading dots */}
@@ -203,55 +239,6 @@ export default function HomePage() {
           </div>
         </div>
       </main>
-
-      {/* Right Sidebar */}
-      <aside className="hidden xl:flex flex-col w-80 p-6 overflow-y-auto" style={{ background: "var(--surface)", borderLeft: "1px solid var(--border-subtle)" }}>
-        <div className="mb-8">
-          <h3 className="text-sm font-bold uppercase tracking-wider mb-4" style={{ color: "var(--text-muted)" }}>Trending Topics</h3>
-          <div className="flex flex-col gap-3">
-            {trendingTopics.map((topic) => (
-              <a
-                key={topic.title}
-                className="group p-3 rounded-lg hover:border-primary/50 transition-colors cursor-pointer"
-                style={{ background: "var(--surface-hover)", border: "1px solid var(--border-subtle)" }}
-                href="#"
-              >
-                <p className="text-xs text-primary font-medium mb-1">{topic.tag}</p>
-                <p className="text-sm font-semibold group-hover:text-primary transition-colors" style={{ color: "var(--text-primary)" }}>{topic.title}</p>
-                <p className="text-xs mt-1" style={{ color: "var(--text-muted)" }}>{topic.count}</p>
-              </a>
-            ))}
-          </div>
-        </div>
-
-        <div>
-          <h3 className="text-sm font-bold uppercase tracking-wider mb-4" style={{ color: "var(--text-muted)" }}>New Verified Sources</h3>
-          <div className="flex flex-col gap-4">
-            {["CNN", "BBC News"].map((source) => (
-              <div key={source} className="flex items-center gap-3">
-                <div className="size-10 rounded-full flex items-center justify-center p-1" style={{ background: "var(--surface)", border: "1px solid var(--border-subtle)" }}>
-                  <span className="text-xs font-bold" style={{ color: "var(--text-primary)" }}>{source[0]}</span>
-                </div>
-                <div className="flex flex-col">
-                  <div className="flex items-center gap-1">
-                    <span className="text-sm font-bold" style={{ color: "var(--text-primary)" }}>{source}</span>
-                    <span className="material-symbols-outlined text-[14px] text-primary fill-1">verified</span>
-                  </div>
-                  <button className="text-xs text-primary hover:underline text-left">Follow</button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="mt-auto pt-8 flex flex-wrap gap-x-4 gap-y-2 text-xs" style={{ color: "var(--text-muted)" }}>
-          <a className="hover:underline hover:text-primary" href="#">Privacy</a>
-          <a className="hover:underline hover:text-primary" href="#">Terms</a>
-          <a className="hover:underline hover:text-primary" href="#">About RawFeed</a>
-          <a className="hover:underline hover:text-primary" href="#">Verification</a>
-          <span className="w-full mt-2">© 2025 RawFeed Inc.</span>
-        </div>
-      </aside>
     </>
   );
 }

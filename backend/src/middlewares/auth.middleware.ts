@@ -26,4 +26,19 @@ export class AuthMiddleware {
       res.status(401).json({ error: "Invalid or expired token" });
     }
   };
+
+  static optionalAuthenticate = (req: AuthenticatedRequest, res: Response, next: NextFunction): void => {
+    try {
+      const token = req.cookies?.["token"] as string | undefined;
+
+      if (token) {
+        const decoded = jwt.verify(token, JWT_SECRET) as JwtPayload;
+        req.userId = decoded.userId;
+      }
+
+      next();
+    } catch (error) {
+      next();
+    }
+  };
 }

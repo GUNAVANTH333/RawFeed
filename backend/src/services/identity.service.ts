@@ -21,7 +21,11 @@ export class IdentityService {
     return hashToAvatarColor(hash);
   }
 
-  getOrCreateParticipant = async (userId: string, threadId: string) => {
+  getOrCreateParticipant = async (
+    userId: string,
+    threadId: string,
+    useRealName?: boolean
+  ) => {
     const existing = await prisma.threadParticipant.findUnique({
       where: {
         userId_threadId: { userId, threadId },
@@ -32,8 +36,20 @@ export class IdentityService {
       return existing;
     }
 
-    const pseudonym = this.generatePseudonym(userId, threadId);
-    const avatarColor = this.generateAvatarColor(userId, threadId);
+    let pseudonym: string;
+    let avatarColor: string;
+
+    if (useRealName) {
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { displayName: true, email: true },
+      });
+      pseudonym = user?.displayName || user?.email?.split("@")[0] || "User";
+      avatarColor = this.generateAvatarColor(userId, threadId);
+    } else {
+      pseudonym = this.generatePseudonym(userId, threadId);
+      avatarColor = this.generateAvatarColor(userId, threadId);
+    }
 
     const participant = await prisma.threadParticipant.create({
       data: {

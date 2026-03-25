@@ -29,6 +29,7 @@ export const CreateCommentSchema = z.object({
     .min(1, "Comment content is required")
     .max(5000, "Comment must be at most 5000 characters"),
   parentId: z.string().uuid("Invalid parent comment ID").optional(),
+  useRealName: z.boolean().optional(),
 });
 
 export const VoteSchema = z.object({

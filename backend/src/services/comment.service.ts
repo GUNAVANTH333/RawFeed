@@ -12,11 +12,13 @@ export class CommentService {
     userId: string,
     threadId: string,
     content: string,
-    parentId?: string
+    parentId?: string,
+    useRealName?: boolean
   ) => {
     const participant = await this.identityService.getOrCreateParticipant(
       userId,
-      threadId
+      threadId,
+      useRealName
     );
 
     const comment = await prisma.comment.create({
@@ -56,6 +58,12 @@ export class CommentService {
           },
         },
         _count: { select: { replies: true } },
+        votes: userId
+          ? {
+              where: { userId },
+              select: { type: true },
+            }
+          : false,
       },
     });
 
@@ -81,7 +89,8 @@ export class CommentService {
         userShadowScores.get(comment.participant.userId) ?? 0;
       const isHidden = shadowScore < -50;
 
-      const { participant, ...rest } = comment;
+      const { participant, votes, ...rest } = comment;
+      const myVote = Array.isArray(votes) && votes.length > 0 ? votes[0].type : null;
 
       return {
         ...rest,
@@ -95,6 +104,7 @@ export class CommentService {
           : comment.content,
         isHidden,
         isMe: userId ? participant.userId === userId : false,
+        myVote,
       };
     });
 
@@ -164,5 +174,24 @@ export class CommentService {
     ]);
 
     return { action: "voted", type };
+  };
+
+  deleteComment = async (commentId: string, userId: string) => {
+    const comment = await prisma.comment.findUnique({
+      where: { id: commentId },
+      include: {
+        participant: { select: { userId: true } },
+      },
+    });
+
+    if (!comment) {
+      throw new Error("NOT_FOUND");
+    }
+
+    if (comment.participant.userId !== userId) {
+      throw new Error("FORBIDDEN");
+    }
+
+    await prisma.comment.delete({ where: { id: commentId } });
   };
 }

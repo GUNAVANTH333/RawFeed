@@ -17,9 +17,10 @@ export class CommentController {
       }
 
       const { threadId } = req.params as { threadId: string };
-      const { content, parentId } = req.body as {
+      const { content, parentId, useRealName } = req.body as {
         content?: string;
         parentId?: string;
+        useRealName?: boolean;
       };
 
       if (!content || content.trim().length === 0) {
@@ -31,7 +32,8 @@ export class CommentController {
         req.userId,
         threadId,
         content.trim(),
-        parentId
+        parentId,
+        useRealName
       );
 
       res.status(201).json({
@@ -82,6 +84,33 @@ export class CommentController {
 
       res.status(200).json(result);
     } catch (error) {
+      res.status(500).json({ error: "Internal server error" });
+    }
+  };
+
+  delete = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    try {
+      if (!req.userId) {
+        res.status(401).json({ error: "Unauthorized" });
+        return;
+      }
+
+      const { id } = req.params as { id: string };
+
+      await this.commentService.deleteComment(id, req.userId);
+
+      res.status(200).json({ message: "Comment deleted successfully" });
+    } catch (error) {
+      if (error instanceof Error) {
+        if (error.message === "NOT_FOUND") {
+          res.status(404).json({ error: "Comment not found" });
+          return;
+        }
+        if (error.message === "FORBIDDEN") {
+          res.status(403).json({ error: "You can only delete your own comments" });
+          return;
+        }
+      }
       res.status(500).json({ error: "Internal server error" });
     }
   };

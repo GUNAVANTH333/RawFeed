@@ -14,13 +14,19 @@ router.post(
   commentController.create
 );
 
-router.get("/threads/:threadId/comments", commentController.getByThread);
+router.get("/threads/:threadId/comments", AuthMiddleware.optionalAuthenticate, commentController.getByThread);
 
 router.post(
   "/comments/:id/vote",
   AuthMiddleware.authenticate,
   ValidateMiddleware.body(VoteSchema),
   commentController.vote
+);
+
+router.delete(
+  "/comments/:id",
+  AuthMiddleware.authenticate,
+  commentController.delete
 );
 
 export default router;

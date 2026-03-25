@@ -48,6 +48,12 @@ export async function getThread(id: string) {
   return request<{ thread: ThreadDetail }>(`/api/threads/${id}`);
 }
 
+export async function likeThread(threadId: string) {
+  return request<{ liked: boolean; likeCount: number }>(`/api/threads/${threadId}/like`, {
+    method: "POST",
+  });
+}
+
 export async function createThread(data: { title: string; url?: string; domain?: string; imageUrl?: string }) {
   return request<{ message: string; thread: Thread }>("/api/threads", {
     method: "POST",
@@ -59,10 +65,10 @@ export async function getComments(threadId: string) {
   return request<{ comments: Comment[] }>(`/api/threads/${threadId}/comments`);
 }
 
-export async function createComment(threadId: string, content: string, parentId?: string) {
+export async function createComment(threadId: string, content: string, parentId?: string, useRealName?: boolean) {
   return request<{ message: string; comment: Comment }>(`/api/threads/${threadId}/comments`, {
     method: "POST",
-    body: JSON.stringify({ content, parentId }),
+    body: JSON.stringify({ content, parentId, useRealName }),
   });
 }
 
@@ -70,6 +76,25 @@ export async function voteComment(commentId: string, type: "up" | "down") {
   return request<{ action: string; type: string }>(`/api/comments/${commentId}/vote`, {
     method: "POST",
     body: JSON.stringify({ type }),
+  });
+}
+
+export async function deleteThread(threadId: string) {
+  return request<{ message: string }>(`/api/threads/${threadId}`, {
+    method: "DELETE",
+  });
+}
+
+export async function updateThread(threadId: string, data: { title?: string; url?: string; imageUrl?: string }) {
+  return request<{ message: string; thread: Thread }>(`/api/threads/${threadId}`, {
+    method: "PUT",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function deleteComment(commentId: string) {
+  return request<{ message: string }>(`/api/comments/${commentId}`, {
+    method: "DELETE",
   });
 }
 
@@ -91,6 +116,8 @@ export interface Thread {
   imageUrl: string | null;
   createdAt: string;
   creatorId: string;
+  likeCount: number;
+  isLiked: boolean;
   _count?: { comments: number; participants: number };
   myPseudonym?: string | null;
   myAvatarColor?: string | null;
@@ -124,6 +151,7 @@ export interface Comment {
   _count?: { replies: number };
   isHidden?: boolean;
   isMe?: boolean;
+  myVote?: string | null;
 }
 
 export interface Pagination {

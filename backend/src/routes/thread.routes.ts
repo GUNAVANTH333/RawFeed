@@ -13,7 +13,10 @@ router.post(
   ValidateMiddleware.body(CreateThreadSchema),
   threadController.create
 );
-router.get("/", threadController.getAll);
-router.get("/:id", threadController.getById);
+router.get("/", AuthMiddleware.optionalAuthenticate, threadController.getAll);
+router.get("/:id", AuthMiddleware.optionalAuthenticate, threadController.getById);
+router.put("/:id", AuthMiddleware.authenticate, threadController.update);
+router.delete("/:id", AuthMiddleware.authenticate, threadController.delete);
+router.post("/:id/like", AuthMiddleware.authenticate, threadController.toggleLike);
 
 export default router;

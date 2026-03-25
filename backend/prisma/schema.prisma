@@ -18,23 +18,25 @@ model User {
   participations   ThreadParticipant[]
   submittedThreads Thread[]
   votes            Vote[]
+  threadLikes      ThreadLike[]
 
   @@map("users")
 }
 
 model Thread {
   id          String   @id @default(uuid())
-  url         String   @unique
-  domain      String
+  url         String?
+  domain      String?
   title       String
   imageUrl    String?
   createdAt   DateTime @default(now())
-  
+
   creatorId   String
   creator     User     @relation(fields: [creatorId], references: [id])
 
   comments     Comment[]
   participants ThreadParticipant[]
+  likes        ThreadLike[]
 
   @@index([domain])
   @@map("threads")
@@ -89,6 +91,20 @@ model Vote {
 
   @@unique([userId, commentId])
   @@map("votes")
+}
+
+model ThreadLike {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+
+  userId   String
+  threadId String
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  thread Thread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, threadId])
+  @@map("thread_likes")
 }
 
 model WhitelistDomain {

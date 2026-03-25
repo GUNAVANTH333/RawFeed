@@ -2,7 +2,8 @@
 
 import { useEffect, useState, use } from "react";
 import Link from "next/link";
-import { getThread, getComments, createComment, voteComment, type ThreadDetail, type Comment } from "@/lib/api";
+import { useRouter } from "next/navigation";
+import { getThread, getComments, createComment, voteComment, deleteThread, deleteComment, updateThread, type ThreadDetail, type Comment, likeThread } from "@/lib/api";
 import { useAuth } from "@/lib/AuthContext";
 import { useTheme } from "@/lib/ThemeProvider";
 
@@ -30,43 +31,177 @@ export default function ThreadPage({ params }: { params: Promise<{ id: string }>
   const { id } = use(params);
   const { user } = useAuth();
   const { theme, toggleTheme } = useTheme();
+  const router = useRouter();
   const [thread, setThread] = useState<ThreadDetail | null>(null);
   const [comments, setComments] = useState<Comment[]>([]);
   const [newComment, setNewComment] = useState("");
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [showIdentityModal, setShowIdentityModal] = useState(false);
+  const [myPseudonym, setMyPseudonym] = useState<string | null>(null);
+  const [identityChoice, setIdentityChoice] = useState<boolean | null>(null);
+  const [showThreadMenu, setShowThreadMenu] = useState(false);
+  const [editMode, setEditMode] = useState(false);
+  const [editTitle, setEditTitle] = useState("");
+  const [editUrl, setEditUrl] = useState("");
+  const [replyingTo, setReplyingTo] = useState<string | null>(null);
+  const [replyText, setReplyText] = useState("");
 
   useEffect(() => {
     Promise.all([
-      getThread(id).then((d) => setThread(d.thread)),
+      getThread(id).then((d) => {
+        setThread(d.thread);
+        setMyPseudonym(d.thread.myPseudonym ?? null);
+      }),
       getComments(id).then((d) => setComments(d.comments)),
     ])
       .catch(() => {})
       .finally(() => setLoading(false));
   }, [id]);
 
+  const handleSelectIdentity = (useRealName: boolean) => {
+    setIdentityChoice(useRealName);
+    setShowIdentityModal(false);
+    if (useRealName) {
+      setMyPseudonym(user?.displayName || user?.email?.split("@")[0] || "You");
+    } else {
+      setMyPseudonym("Anonymous (assigned on send)");
+    }
+  };
+
   const handleComment = async () => {
     if (!newComment.trim() || submitting) return;
+
+    if (!myPseudonym || identityChoice === null) {
+      if (!thread?.myPseudonym) {
+        setShowIdentityModal(true);
+        return;
+      }
+    }
+
     setSubmitting(true);
     try {
-      const { comment } = await createComment(id, newComment.trim());
+      const useRealName = identityChoice !== null ? identityChoice : undefined;
+      const { comment } = await createComment(id, newComment.trim(), undefined, useRealName);
       setComments((prev) => [...prev, comment]);
       setNewComment("");
+      setMyPseudonym(comment.participant.pseudonym);
+      setIdentityChoice(null);
     } catch {}
     setSubmitting(false);
   };
 
+  const handleReply = async (parentId: string) => {
+    if (!replyText.trim() || submitting) return;
+
+    if (!myPseudonym || identityChoice === null) {
+      if (!thread?.myPseudonym) {
+        setShowIdentityModal(true);
+        return;
+      }
+    }
+
+    setSubmitting(true);
+    try {
+      const useRealName = identityChoice !== null ? identityChoice : undefined;
+      const { comment } = await createComment(id, replyText.trim(), parentId, useRealName);
+      setComments((prev) => [...prev, comment]);
+      setReplyText("");
+      setReplyingTo(null);
+      setMyPseudonym(comment.participant.pseudonym);
+      setIdentityChoice(null);
+    } catch {}
+    setSubmitting(false);
+  };
+
+  const handleDeleteThread = async () => {
+    if (!confirm("Are you sure you want to delete this thread? This will remove all comments and cannot be undone.")) return;
+    try {
+      await deleteThread(id);
+      router.push("/");
+    } catch {}
+  };
+
+  const handleEditThread = () => {
+    if (!thread) return;
+    setEditTitle(thread.title);
+    setEditUrl(thread.url || "");
+    setEditMode(true);
+    setShowThreadMenu(false);
+  };
+
+  const handleUpdateThread = async () => {
+    if (!editTitle.trim()) return;
+    try {
+      const { thread: updated } = await updateThread(id, {
+        title: editTitle.trim(),
+        url: editUrl.trim() || undefined,
+      });
+      setThread((prev) => prev ? { ...prev, title: updated.title, url: updated.url } : prev);
+      setEditMode(false);
+    } catch {}
+  };
+
+  const handleDeleteComment = async (commentId: string) => {
+    if (!confirm("Delete this comment?")) return;
+    try {
+      await deleteComment(commentId);
+      setComments((prev) => prev.filter((c) => c.id !== commentId && c.parentId !== commentId));
+    } catch {}
+  };
+
   const handleVote = async (commentId: string, type: "up" | "down") => {
     try {
-      await voteComment(commentId, type);
+      const comment = comments.find((c) => c.id === commentId);
+      if (!comment) return;
+
+      const currentVote = comment.myVote;
+
+      // Optimistic update
       setComments((prev) =>
         prev.map((c) => {
           if (c.id !== commentId) return c;
-          if (type === "up") return { ...c, upvotes: c.upvotes + 1 };
-          return { ...c, downvotes: c.downvotes + 1 };
+
+          // If already voted the same way, remove the vote
+          if (currentVote === type) {
+            return {
+              ...c,
+              upvotes: type === "up" ? c.upvotes - 1 : c.upvotes,
+              downvotes: type === "down" ? c.downvotes - 1 : c.downvotes,
+              myVote: null,
+            };
+          }
+
+          // If voted the opposite way, switch the vote
+          if (currentVote && currentVote !== type) {
+            return {
+              ...c,
+              upvotes: type === "up" ? c.upvotes + 1 : c.upvotes - 1,
+              downvotes: type === "down" ? c.downvotes + 1 : c.downvotes - 1,
+              myVote: type,
+            };
+          }
+
+          // If not voted, add the vote
+          return {
+            ...c,
+            upvotes: type === "up" ? c.upvotes + 1 : c.upvotes,
+            downvotes: type === "down" ? c.downvotes + 1 : c.downvotes,
+            myVote: type,
+          };
         })
       );
-    } catch {}
+
+      await voteComment(commentId, type);
+    } catch {
+      // Revert on error
+      const comment = comments.find((c) => c.id === commentId);
+      if (comment) {
+        setComments((prev) =>
+          prev.map((c) => (c.id === commentId ? comment : c))
+        );
+      }
+    }
   };
 
   const topLevelComments = comments.filter((c) => !c.parentId);
@@ -77,6 +212,140 @@ export default function ThreadPage({ params }: { params: Promise<{ id: string }>
     }
     return acc;
   }, {} as Record<string, Comment[]>);
+
+  const renderComment = (comment: Comment, depth: number = 0) => {
+    const ci = getColorIdx(comment.participant.pseudonym);
+    const initial = comment.participant.pseudonym[0]?.toUpperCase() || "?";
+    const replies = repliesByParent[comment.id] || [];
+    const isTopLevel = depth === 0;
+    const avatarSize = isTopLevel ? "size-10" : "size-8";
+    const fontSize = isTopLevel ? "text-lg" : "text-sm";
+    const iconSize = isTopLevel ? "!text-[18px]" : "!text-[16px]";
+
+    return (
+      <div key={comment.id} className={isTopLevel ? "relative group/comment" : "relative"}>
+        {!isTopLevel && <div className="thread-line-curved"></div>}
+        <div className="flex gap-4">
+          <div className="flex flex-col items-center shrink-0 z-10">
+            <div className={`${avatarSize} rounded-full ${ringColors[ci]} ring-2 p-0.5 shadow-sm`} style={{ background: "var(--surface)" }}>
+              <div className={`w-full h-full rounded-full ${bgColors[ci]} flex items-center justify-center ${textColors[ci]} font-bold ${fontSize} select-none`}>
+                {initial}
+              </div>
+            </div>
+          </div>
+          <div className="flex-1 pb-2">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-sm font-bold hover:text-primary cursor-pointer transition-colors" style={{ color: "var(--text-primary)" }}>
+                {comment.participant.pseudonym}
+              </span>
+              {comment.isMe && (
+                <span className="text-xs px-1.5 py-0.5 rounded bg-primary/10 text-primary border border-primary/20 font-semibold">You</span>
+              )}
+              <span className="text-xs" style={{ color: "var(--text-muted)" }}>• {timeAgo(comment.createdAt)}</span>
+            </div>
+
+            {comment.isHidden ? (
+              <div className="flex items-center gap-3 rounded-lg p-3 my-2" style={{ background: "var(--surface-hover)", border: "1px dashed var(--border)" }}>
+                <div className="size-8 rounded-full flex items-center justify-center" style={{ background: "var(--surface)", color: "var(--text-muted)" }}>
+                  <span className="material-symbols-outlined !text-[18px]">visibility_off</span>
+                </div>
+                <p className="text-sm font-medium italic" style={{ color: "var(--text-secondary)" }}>[Hidden by Community Standards]</p>
+              </div>
+            ) : (
+              <div className="text-sm leading-relaxed mb-3" style={{ color: "var(--text-secondary)" }}>{comment.content}</div>
+            )}
+
+            <div className="flex items-center gap-6">
+              <button
+                onClick={() => handleVote(comment.id, "up")}
+                className="flex items-center gap-1.5 hover:text-primary transition-colors group"
+                style={{ color: comment.myVote === "up" ? "var(--color-primary)" : "var(--text-muted)" }}
+              >
+                <span className={`material-symbols-outlined ${iconSize} group-hover:scale-110 transition-transform ${comment.myVote === "up" ? "fill-1" : ""}`}>
+                  thumb_up
+                </span>
+                <span className="text-xs font-medium">{comment.upvotes}</span>
+              </button>
+              <button
+                onClick={() => handleVote(comment.id, "down")}
+                className="flex items-center gap-1.5 hover:text-red-400 transition-colors group"
+                style={{ color: comment.myVote === "down" ? "#f87171" : "var(--text-muted)" }}
+              >
+                <span className={`material-symbols-outlined ${iconSize} group-hover:scale-110 transition-transform ${comment.myVote === "down" ? "fill-1" : ""}`}>
+                  thumb_down
+                </span>
+                <span className="text-xs font-medium">{comment.downvotes}</span>
+              </button>
+              <button
+                onClick={() => {
+                  if (!user) {
+                    alert("Please sign in to reply to comments.");
+                    return;
+                  }
+                  setReplyingTo(replyingTo === comment.id ? null : comment.id);
+                }}
+                className="flex items-center gap-1.5 hover:text-primary transition-colors"
+                style={{ color: replyingTo === comment.id ? "var(--color-primary)" : "var(--text-muted)" }}
+              >
+                <span className="material-symbols-outlined !text-[18px]">chat_bubble</span>
+                <span className="text-xs font-medium">Reply</span>
+              </button>
+              {comment.isMe && (
+                <button onClick={() => handleDeleteComment(comment.id)} className="flex items-center gap-1.5 hover:text-red-400 transition-colors ml-auto" style={{ color: "var(--text-muted)" }}>
+                  <span className="material-symbols-outlined !text-[18px]">delete</span>
+                  <span className="text-xs font-medium">Delete</span>
+                </button>
+              )}
+            </div>
+
+            {/* Reply Input Box */}
+            {user && replyingTo === comment.id && (
+              <div className="mt-4 flex gap-3 items-start">
+                <div className={`size-8 rounded-full ring-2 ring-primary p-0.5 shadow-sm`} style={{ background: "var(--surface)" }}>
+                  <div className="w-full h-full rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs">
+                    {user?.email[0].toUpperCase() || "?"}
+                  </div>
+                </div>
+                <div className="flex-1 flex flex-col gap-2">
+                  <textarea
+                    className="w-full text-sm rounded-lg px-3 py-2 resize-none min-h-[80px] outline-none focus:ring-2 focus:ring-primary/20"
+                    style={{ background: "var(--surface-hover)", color: "var(--text-primary)", border: "1px solid var(--border)" }}
+                    placeholder="Write your reply..."
+                    value={replyText}
+                    onChange={(e) => setReplyText(e.target.value)}
+                    autoFocus
+                  />
+                  <div className="flex gap-2 justify-end">
+                    <button
+                      onClick={() => setReplyingTo(null)}
+                      className="px-3 py-1.5 text-xs font-medium rounded-lg transition-colors"
+                      style={{ color: "var(--text-muted)", background: "var(--surface-hover)" }}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={() => handleReply(comment.id)}
+                      disabled={!replyText.trim() || submitting}
+                      className="px-3 py-1.5 text-xs font-medium bg-primary hover:bg-primary-dark text-white rounded-lg transition-colors disabled:opacity-50"
+                    >
+                      {submitting ? "Sending..." : "Reply"}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Nested Replies */}
+            {replies.length > 0 && (
+              <div className="mt-6 flex flex-col gap-6 relative">
+                {replies.map((reply) => renderComment(reply, depth + 1))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   if (loading) {
     return (
@@ -110,8 +379,6 @@ export default function ThreadPage({ params }: { params: Promise<{ id: string }>
           <nav className="hidden md:flex items-center gap-9">
             <Link className="text-sm font-medium transition-colors hover:text-primary" style={{ color: "var(--text-secondary)" }} href="/">Home</Link>
             <Link className="text-primary text-sm font-bold" href="#">Trending</Link>
-            <Link className="text-sm font-medium transition-colors hover:text-primary" style={{ color: "var(--text-secondary)" }} href="/vault">Bookmarks</Link>
-            <Link className="text-sm font-medium transition-colors hover:text-primary" style={{ color: "var(--text-secondary)" }} href="/vault">Profile</Link>
           </nav>
         </div>
         <div className="flex flex-1 justify-end gap-4 md:gap-8 items-center">
@@ -144,8 +411,6 @@ export default function ThreadPage({ params }: { params: Promise<{ id: string }>
               <span>Back to Feed</span>
             </Link>
             <span className="opacity-50">/</span>
-            <span>{thread.domain || "Discussion"}</span>
-            <span className="opacity-50">/</span>
             <span className="font-medium truncate max-w-[200px]" style={{ color: "var(--text-primary)" }}>{thread.title}</span>
           </div>
 
@@ -160,28 +425,97 @@ export default function ThreadPage({ params }: { params: Promise<{ id: string }>
               )}
               <div className="flex-1 p-5 md:p-6 flex flex-col justify-between" style={{ background: "var(--surface)" }}>
                 <div>
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-2">
-                      <span className="bg-primary/10 text-primary text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded">{thread.domain || "Discussion"}</span>
-                      <span className="text-xs flex items-center gap-1" style={{ color: "var(--text-muted)" }}>
-                        <span className="material-symbols-outlined !text-[14px] text-primary">verified</span> Source Verified
-                      </span>
+                  {editMode ? (
+                    <div className="flex flex-col gap-3">
+                      <input
+                        className="text-xl font-bold rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-primary/30"
+                        style={{ background: "var(--surface-hover)", color: "var(--text-primary)", border: "1px solid var(--border)" }}
+                        value={editTitle}
+                        onChange={(e) => setEditTitle(e.target.value)}
+                        placeholder="Thread title"
+                      />
+                      <input
+                        className="text-sm rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-primary/30"
+                        style={{ background: "var(--surface-hover)", color: "var(--text-secondary)", border: "1px solid var(--border)" }}
+                        value={editUrl}
+                        onChange={(e) => setEditUrl(e.target.value)}
+                        placeholder="Source URL (optional)"
+                      />
+                      <div className="flex gap-2">
+                        <button onClick={handleUpdateThread} className="bg-primary hover:bg-primary-dark text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors">Save</button>
+                        <button onClick={() => setEditMode(false)} className="text-sm font-medium px-4 py-2 rounded-lg transition-colors" style={{ color: "var(--text-muted)", background: "var(--surface-hover)" }}>Cancel</button>
+                      </div>
                     </div>
-                    <span className="text-xs" style={{ color: "var(--text-muted)" }}>{timeAgo(thread.createdAt)}</span>
-                  </div>
-                  <h1 className="text-xl md:text-2xl font-bold leading-tight mb-3" style={{ color: "var(--text-primary)" }}>{thread.title}</h1>
-                  {thread.url && <p className="text-sm line-clamp-2 mb-4" style={{ color: "var(--text-secondary)" }}>{thread.url}</p>}
+                  ) : (
+                    <>
+                      <h1 className="text-xl md:text-2xl font-bold leading-tight mb-3" style={{ color: "var(--text-primary)" }}>{thread.title}</h1>
+                      {thread.url && <p className="text-sm line-clamp-2 mb-4" style={{ color: "var(--text-secondary)" }}>{thread.url}</p>}
+                    </>
+                  )}
                 </div>
                 <div className="flex items-center justify-between pt-2 mt-2" style={{ borderTop: "1px solid var(--border-subtle)" }}>
+                  <span className="text-xs" style={{ color: "var(--text-muted)" }}>{timeAgo(thread.createdAt)}</span>
                   <div className="flex items-center gap-2">
-                    <div className="size-5 rounded flex items-center justify-center text-white text-[10px] font-bold" style={{ background: "var(--text-primary)" }}>{thread.domain?.[0]?.toUpperCase() || "R"}</div>
-                    <span className="text-sm font-medium" style={{ color: "var(--text-secondary)" }}>{thread.domain || "RawFeed"}</span>
+                    {thread.url && (
+                      <a href={thread.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-sm font-medium text-primary hover:text-primary-dark transition-colors">
+                        Read Full Analysis <span className="material-symbols-outlined !text-[16px]">open_in_new</span>
+                      </a>
+                    )}
+                    <button
+                      onClick={async (e) => {
+                        e.preventDefault();
+                        if (!user) {
+                          alert("Please sign in to like threads.");
+                          return;
+                        }
+                        
+                        // Optimistic
+                        setThread(prev => prev ? {
+                          ...prev,
+                          isLiked: !prev.isLiked,
+                          likeCount: prev.isLiked ? prev.likeCount - 1 : prev.likeCount + 1
+                        } : null);
+                        
+                        try {
+                          const { liked, likeCount } = await likeThread(thread.id);
+                          setThread(prev => prev ? { ...prev, isLiked: liked, likeCount } : null);
+                        } catch {
+                          setThread(prev => prev ? { ...prev, isLiked: !prev.isLiked, likeCount: !prev.isLiked ? prev.likeCount - 1 : prev.likeCount + 1} : null);
+                        }
+                      }}
+                      className="flex items-center gap-1.5 transition-colors group px-2 py-1 rounded-lg hover:bg-black/5 dark:hover:bg-white/5"
+                      style={{ color: thread.isLiked ? "var(--color-primary)" : "var(--text-muted)" }}
+                      aria-label="Like Thread"
+                    >
+                      <span className={`material-symbols-outlined !text-[20px] transition-transform group-hover:scale-110 ${thread.isLiked ? "fill-1" : ""}`}>
+                        favorite
+                      </span>
+                      {thread.likeCount > 0 && <span className="text-sm font-medium">{thread.likeCount}</span>}
+                    </button>
+                    <div className="relative">
+                      <button onClick={() => setShowThreadMenu((v) => !v)} className="p-1.5 rounded-lg hover:text-primary transition-colors" style={{ color: "var(--text-muted)" }}>
+                        <span className="material-symbols-outlined !text-[20px]">more_horiz</span>
+                      </button>
+                      {showThreadMenu && (
+                        <div className="absolute right-0 top-full mt-1 w-44 rounded-xl shadow-2xl py-1 z-50" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+                          {user && thread.creatorId === user.id ? (
+                            <>
+                              <button onClick={handleEditThread} className="w-full flex items-center gap-2 px-4 py-2.5 text-sm hover:bg-primary/5 transition-colors text-left" style={{ color: "var(--text-primary)" }}>
+                                <span className="material-symbols-outlined !text-[18px]">edit</span> Edit Thread
+                              </button>
+                              <button onClick={() => { setShowThreadMenu(false); handleDeleteThread(); }} className="w-full flex items-center gap-2 px-4 py-2.5 text-sm hover:bg-red-500/5 transition-colors text-left text-red-400">
+                                <span className="material-symbols-outlined !text-[18px]">delete</span> Delete Thread
+                              </button>
+                            </>
+                          ) : (
+                            <button onClick={() => { setShowThreadMenu(false); alert("Thread reported. We'll review it shortly."); }} className="w-full flex items-center gap-2 px-4 py-2.5 text-sm hover:bg-red-500/5 transition-colors text-left" style={{ color: "var(--text-primary)" }}>
+                              <span className="material-symbols-outlined !text-[18px] text-red-400">flag</span> Report Thread
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </div>
-                  {thread.url && (
-                    <a href={thread.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-sm font-medium text-primary hover:text-primary-dark transition-colors">
-                      Read Full Analysis <span className="material-symbols-outlined !text-[16px]">open_in_new</span>
-                    </a>
-                  )}
                 </div>
               </div>
             </div>
@@ -202,111 +536,7 @@ export default function ThreadPage({ params }: { params: Promise<{ id: string }>
 
           {/* Comments */}
           <div className="flex flex-col gap-6 px-2">
-            {topLevelComments.map((comment, idx) => {
-              const ci = getColorIdx(comment.participant.pseudonym);
-              const initial = comment.participant.pseudonym[0]?.toUpperCase() || "?";
-              const replies = repliesByParent[comment.id] || [];
-
-              return (
-                <div key={comment.id} className="relative group/comment">
-                  {idx < topLevelComments.length - 1 && replies.length > 0 && <div className="thread-line"></div>}
-                  <div className="flex gap-4">
-                    <div className="flex flex-col items-center shrink-0 z-10">
-                      <div className={`size-10 rounded-full ${ringColors[ci]} ring-2 p-0.5 shadow-sm`} style={{ background: "var(--surface)" }}>
-                        <div className={`w-full h-full rounded-full ${bgColors[ci]} flex items-center justify-center ${textColors[ci]} font-bold text-lg select-none`}>
-                          {initial}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex-1 pb-2">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="text-sm font-bold hover:text-primary cursor-pointer transition-colors" style={{ color: "var(--text-primary)" }}>
-                          {comment.participant.pseudonym}
-                        </span>
-                        {comment.isMe && (
-                          <span className="text-xs px-1.5 py-0.5 rounded bg-primary/10 text-primary border border-primary/20 font-semibold">You</span>
-                        )}
-                        <span className="text-xs" style={{ color: "var(--text-muted)" }}>• {timeAgo(comment.createdAt)}</span>
-                      </div>
-
-                      {comment.isHidden ? (
-                        <div className="flex items-center gap-3 rounded-lg p-3 my-2" style={{ background: "var(--surface-hover)", border: "1px dashed var(--border)" }}>
-                          <div className="size-8 rounded-full flex items-center justify-center" style={{ background: "var(--surface)", color: "var(--text-muted)" }}>
-                            <span className="material-symbols-outlined !text-[18px]">visibility_off</span>
-                          </div>
-                          <p className="text-sm font-medium italic" style={{ color: "var(--text-secondary)" }}>[Hidden by Community Standards]</p>
-                        </div>
-                      ) : (
-                        <div className="text-sm leading-relaxed mb-3" style={{ color: "var(--text-secondary)" }}>{comment.content}</div>
-                      )}
-
-                      <div className="flex items-center gap-6">
-                        <button onClick={() => handleVote(comment.id, "up")} className="flex items-center gap-1.5 hover:text-primary transition-colors group" style={{ color: "var(--text-muted)" }}>
-                          <span className="material-symbols-outlined !text-[18px] group-hover:scale-110 transition-transform">thumb_up</span>
-                          <span className="text-xs font-medium">{comment.upvotes}</span>
-                        </button>
-                        <button onClick={() => handleVote(comment.id, "down")} className="flex items-center gap-1.5 hover:text-red-400 transition-colors group" style={{ color: "var(--text-muted)" }}>
-                          <span className="material-symbols-outlined !text-[18px] group-hover:scale-110 transition-transform">thumb_down</span>
-                          <span className="text-xs font-medium">{comment.downvotes}</span>
-                        </button>
-                        <button className="flex items-center gap-1.5 hover:text-primary transition-colors" style={{ color: "var(--text-muted)" }}>
-                          <span className="material-symbols-outlined !text-[18px]">chat_bubble</span>
-                          <span className="text-xs font-medium">Reply</span>
-                        </button>
-                        <button className="flex items-center gap-1.5 hover:text-primary transition-colors ml-auto" style={{ color: "var(--text-muted)" }}>
-                          <span className="material-symbols-outlined !text-[18px]">more_horiz</span>
-                        </button>
-                      </div>
-
-                      {replies.length > 0 && (
-                        <div className="mt-6 flex flex-col gap-6 relative">
-                          {replies.map((reply) => {
-                            const ri = getColorIdx(reply.participant.pseudonym);
-                            const replyInitial = reply.participant.pseudonym[0]?.toUpperCase() || "?";
-                            return (
-                              <div key={reply.id} className="relative flex gap-4">
-                                <div className="thread-line-curved"></div>
-                                <div className="flex flex-col items-center shrink-0 z-10">
-                                  <div className={`size-8 rounded-full ${ringColors[ri]} ring-2 p-0.5 shadow-sm`} style={{ background: "var(--surface)" }}>
-                                    <div className={`w-full h-full rounded-full ${bgColors[ri]} flex items-center justify-center ${textColors[ri]} font-bold text-sm select-none`}>
-                                      {replyInitial}
-                                    </div>
-                                  </div>
-                                </div>
-                                <div className="flex-1">
-                                  <div className="flex items-center gap-2 mb-1">
-                                    <span className="text-sm font-bold hover:text-primary cursor-pointer transition-colors" style={{ color: "var(--text-primary)" }}>{reply.participant.pseudonym}</span>
-                                    {reply.isMe && <span className="text-xs px-1.5 py-0.5 rounded bg-primary/10 text-primary font-semibold">You</span>}
-                                    <span className="text-xs" style={{ color: "var(--text-muted)" }}>• {timeAgo(reply.createdAt)}</span>
-                                  </div>
-                                  {reply.isHidden ? (
-                                    <div className="flex items-center gap-3 rounded-lg p-3" style={{ background: "var(--surface-hover)", border: "1px dashed var(--border)" }}>
-                                      <span className="material-symbols-outlined !text-[18px]" style={{ color: "var(--text-muted)" }}>visibility_off</span>
-                                      <p className="text-sm font-medium italic" style={{ color: "var(--text-secondary)" }}>[Hidden by Community Standards]</p>
-                                    </div>
-                                  ) : (
-                                    <div className="text-sm leading-relaxed mb-2" style={{ color: "var(--text-secondary)" }}>{reply.content}</div>
-                                  )}
-                                  <div className="flex items-center gap-6">
-                                    <button onClick={() => handleVote(reply.id, "up")} className="flex items-center gap-1.5 hover:text-primary transition-colors" style={{ color: "var(--text-muted)" }}>
-                                      <span className="material-symbols-outlined !text-[16px]">thumb_up</span>
-                                      <span className="text-xs font-medium">{reply.upvotes}</span>
-                                    </button>
-                                    <button className="flex items-center gap-1.5 hover:text-primary transition-colors" style={{ color: "var(--text-muted)" }}>
-                                      <span className="text-xs font-medium">Reply</span>
-                                    </button>
-                                  </div>
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
+            {topLevelComments.map((comment) => renderComment(comment))}
 
             {comments.length === 0 && (
               <div className="text-center py-12">
@@ -328,14 +558,56 @@ export default function ThreadPage({ params }: { params: Promise<{ id: string }>
       {user && (
         <footer className="fixed bottom-0 left-0 w-full backdrop-blur-lg z-40 py-4 px-4 shadow-[0_-4px_20px_rgba(14,165,233,0.1)]" style={{ background: "color-mix(in srgb, var(--surface) 95%, transparent)", borderTop: "1px solid var(--border)" }}>
           <div className="max-w-[800px] mx-auto w-full flex flex-col gap-2">
-            <div className="flex items-center gap-2 px-2">
+            <div className="relative flex items-center gap-2 px-2">
               <span className="text-xs" style={{ color: "var(--text-secondary)" }}>Replying as</span>
-              <div className="flex items-center gap-2 rounded-full px-2 py-1 pr-3" style={{ background: "var(--surface-hover)" }}>
+              <button
+                onClick={() => !thread?.myPseudonym && setShowIdentityModal((v) => !v)}
+                className={`flex items-center gap-2 rounded-full px-2 py-1 pr-3 transition-all ${!thread?.myPseudonym ? "cursor-pointer hover:ring-2 hover:ring-primary/30" : ""}`}
+                style={{ background: "var(--surface-hover)" }}
+              >
                 <div className="size-5 rounded-full ring-1 ring-primary flex items-center justify-center text-[10px] text-primary font-bold" style={{ background: "var(--surface)" }}>
-                  {thread.myPseudonym?.[0]?.toUpperCase() || user.email[0].toUpperCase()}
+                  {myPseudonym?.[0]?.toUpperCase() || "?"}
                 </div>
-                <span className="text-xs font-semibold" style={{ color: "var(--text-primary)" }}>{thread.myPseudonym || "Anonymous"}</span>
-              </div>
+                <span className="text-xs font-semibold" style={{ color: "var(--text-primary)" }}>{myPseudonym || "Choose identity..."}</span>
+                {!thread?.myPseudonym && (
+                  <span className="material-symbols-outlined !text-[14px] transition-transform" style={{ color: "var(--text-muted)", transform: showIdentityModal ? "rotate(180deg)" : "rotate(0deg)" }}>expand_less</span>
+                )}
+              </button>
+
+              {/* Inline Identity Dropdown */}
+              {showIdentityModal && (
+                <div className="absolute bottom-full left-0 mb-2 w-80 rounded-xl shadow-2xl p-3 z-50" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+                  <p className="text-[10px] font-bold uppercase tracking-wider mb-2 px-1" style={{ color: "var(--text-muted)" }}>Choose your thread identity</p>
+                  <button
+                    onClick={() => handleSelectIdentity(true)}
+                    className="w-full flex items-center gap-3 p-3 rounded-lg transition-all hover:shadow-sm group"
+                    style={{ background: identityChoice === true ? "color-mix(in srgb, var(--color-primary) 8%, var(--surface-hover))" : "var(--surface-hover)", border: identityChoice === true ? "1px solid color-mix(in srgb, var(--color-primary) 30%, transparent)" : "1px solid var(--border-subtle)" }}
+                  >
+                    <div className="size-8 rounded-full bg-primary/10 flex items-center justify-center text-primary flex-shrink-0 group-hover:bg-primary/20 transition-colors">
+                      <span className="material-symbols-outlined !text-[18px]">badge</span>
+                    </div>
+                    <div className="text-left flex-1">
+                      <p className="text-sm font-bold" style={{ color: "var(--text-primary)" }}>{user.displayName || user.email.split("@")[0]}</p>
+                      <p className="text-[10px]" style={{ color: "var(--text-muted)" }}>Use real name</p>
+                    </div>
+                    {identityChoice === true && <span className="material-symbols-outlined text-primary !text-[18px]">check_circle</span>}
+                  </button>
+                  <button
+                    onClick={() => handleSelectIdentity(false)}
+                    className="w-full flex items-center gap-3 p-3 rounded-lg transition-all hover:shadow-sm group mt-2"
+                    style={{ background: identityChoice === false ? "color-mix(in srgb, var(--color-accent-green) 8%, var(--surface-hover))" : "var(--surface-hover)", border: identityChoice === false ? "1px solid color-mix(in srgb, var(--color-accent-green) 30%, transparent)" : "1px solid var(--border-subtle)" }}
+                  >
+                    <div className="size-8 rounded-full bg-accent-green/10 flex items-center justify-center text-accent-green flex-shrink-0 group-hover:bg-accent-green/20 transition-colors">
+                      <span className="material-symbols-outlined !text-[18px]">masks</span>
+                    </div>
+                    <div className="text-left flex-1">
+                      <p className="text-sm font-bold" style={{ color: "var(--text-primary)" }}>Stay Anonymous</p>
+                      <p className="text-[10px]" style={{ color: "var(--text-muted)" }}>Random pseudonym for this thread</p>
+                    </div>
+                    {identityChoice === false && <span className="material-symbols-outlined text-accent-green !text-[18px]">check_circle</span>}
+                  </button>
+                </div>
+              )}
             </div>
             <div className="flex items-end gap-3 w-full">
               <div className="relative flex-1">
@@ -352,7 +624,7 @@ export default function ThreadPage({ params }: { params: Promise<{ id: string }>
                   <button className="p-1 hover:text-primary transition-colors rounded"><span className="material-symbols-outlined !text-[18px]">link</span></button>
                 </div>
               </div>
-              <button onClick={handleComment} disabled={submitting || !newComment.trim()} className="h-12 w-12 flex items-center justify-center bg-primary hover:bg-primary-dark text-white rounded-xl shadow-lg shadow-primary/30 transition-all hover:scale-105 active:scale-95 disabled:opacity-50 disabled:hover:scale-100">
+              <button onClick={() => handleComment()} disabled={submitting || !newComment.trim()} className="h-12 w-12 flex items-center justify-center bg-primary hover:bg-primary-dark text-white rounded-xl shadow-lg shadow-primary/30 transition-all hover:scale-105 active:scale-95 disabled:opacity-50 disabled:hover:scale-100">
                 <span className="material-symbols-outlined">send</span>
               </button>
             </div>

@@ -7,8 +7,8 @@ import { useTheme } from "@/lib/ThemeProvider";
 
 const navItems = [
   { href: "/", label: "Home", icon: "home" },
-  { href: "/vault", label: "Vault", icon: "inventory_2" },
-  { href: "/notifications", label: "Notifications", icon: "notifications", badge: 3 },
+  { href: "/new-thread", label: "New Thread", icon: "add_box" },
+  { href: "/notifications", label: "Notifications", icon: "notifications" },
 ];
 
 export default function Sidebar() {
@@ -26,9 +26,6 @@ export default function Sidebar() {
       style={{ background: "var(--surface)", borderRight: "1px solid var(--border-subtle)" }}
     >
       <div className="flex items-center gap-3 px-6 py-8">
-        <div className="rounded-lg size-10 bg-gradient-to-br from-primary to-cyan-500 shadow-lg shadow-primary/20 flex items-center justify-center text-white">
-          <span className="material-symbols-outlined text-[24px]">rss_feed</span>
-        </div>
         <div className="flex flex-col">
           <h1 className="text-lg font-bold leading-none tracking-tight" style={{ color: "var(--text-primary)" }}>
             RawFeed
@@ -54,11 +51,6 @@ export default function Sidebar() {
                 {item.icon}
               </span>
               <span className="text-sm font-medium">{item.label}</span>
-              {item.badge && (
-                <span className="ml-auto bg-primary text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
-                  {item.badge}
-                </span>
-              )}
             </Link>
           );
         })}
@@ -89,10 +81,7 @@ export default function Sidebar() {
 
       <div className="p-4" style={{ borderTop: "1px solid var(--border-subtle)" }}>
         {user ? (
-          <Link
-            href="/vault"
-            className="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors"
-          >
+          <div className="flex items-center gap-3 px-4 py-3">
             <div className="size-8 rounded-full bg-sky-200 flex items-center justify-center overflow-hidden relative">
               <div className="absolute inset-0 opacity-50 bg-[conic-gradient(at_top,_var(--tw-gradient-stops))] from-sky-900 via-sky-500 to-sky-900"></div>
               <span className="relative text-xs font-bold" style={{ color: "var(--text-primary)" }}>{initials}</span>
@@ -101,7 +90,7 @@ export default function Sidebar() {
               <span className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>{user.displayName || user.email.split("@")[0]}</span>
               <span className="text-xs" style={{ color: "var(--text-muted)" }}>{user.email}</span>
             </div>
-          </Link>
+          </div>
         ) : (
           <Link
             href="/login"
