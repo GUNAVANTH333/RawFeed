@@ -12,6 +12,7 @@ export default function NewThreadPage() {
 
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
+  const [isAnonymous, setIsAnonymous] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
@@ -47,7 +48,7 @@ export default function NewThreadPage() {
     setError("");
 
     try {
-      const result = await createThread({ title: title.trim() });
+      const result = await createThread({ title: title.trim(), isAnonymous });
       router.push(`/threads/${result.thread.id}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to create thread");
@@ -105,6 +106,47 @@ export default function NewThreadPage() {
               />
             </div>
 
+            {/* Anonymous Toggle */}
+            <div
+              className="flex items-center justify-between rounded-xl px-5 py-4 transition-colors"
+              style={{ background: "var(--surface-hover)", border: `1px solid ${isAnonymous ? "var(--color-primary, #6366f1)" : "var(--border-subtle)"}` }}
+            >
+              <div className="flex items-center gap-3">
+                <span
+                  className="material-symbols-outlined text-[22px]"
+                  style={{ color: isAnonymous ? "var(--color-primary, #6366f1)" : "var(--text-muted)" }}
+                >
+                  {isAnonymous ? "visibility_off" : "person"}
+                </span>
+                <div>
+                  <p className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
+                    {isAnonymous ? "Posting Anonymously" : "Posting as Yourself"}
+                  </p>
+                  <p className="text-xs mt-0.5" style={{ color: "var(--text-muted)" }}>
+                    {isAnonymous
+                      ? "Your identity will be hidden from other users"
+                      : "Your pseudonym will be visible on this thread"}
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                role="switch"
+                aria-checked={isAnonymous}
+                onClick={() => setIsAnonymous((prev) => !prev)}
+                className="relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+                style={{
+                  background: isAnonymous ? "var(--color-primary, #6366f1)" : "var(--border-subtle)",
+                }}
+              >
+                <span
+                  className="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"
+                  style={{ transform: isAnonymous ? "translateX(20px)" : "translateX(0px)" }}
+                />
+              </button>
+            </div>
+
             {/* Action Bar */}
             <div className="pt-6 flex items-center justify-end" style={{ borderTop: "1px solid var(--border-subtle)" }}>
               <button
@@ -113,7 +155,7 @@ export default function NewThreadPage() {
                 disabled={submitting || !title.trim()}
               >
                 {submitting ? "Posting..." : "Post Thread"}
-                <span className="material-symbols-outlined">send</span>
+                <span className="material-symbols-outlined">{isAnonymous ? "visibility_off" : "send"}</span>
               </button>
             </div>
           </form>

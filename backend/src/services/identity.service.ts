@@ -42,9 +42,9 @@ export class IdentityService {
     if (useRealName) {
       const user = await prisma.user.findUnique({
         where: { id: userId },
-        select: { displayName: true, email: true },
+        select: { username: true, email: true },
       });
-      pseudonym = user?.displayName || user?.email?.split("@")[0] || "User";
+      pseudonym = user?.username || user?.email?.split("@")[0] || "User";
       avatarColor = this.generateAvatarColor(userId, threadId);
     } else {
       pseudonym = this.generatePseudonym(userId, threadId);

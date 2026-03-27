@@ -188,7 +188,7 @@ export default function HomePage() {
                               <div className="absolute inset-0 bg-[conic-gradient(from_90deg_at_50%_50%,_#BAE6FD_0%,_#38BDF8_50%,_#BAE6FD_100%)]"></div>
                             </div>
                             <span className="text-sm font-semibold" style={{ color: "var(--text-secondary)" }}>
-                              {thread.myPseudonym || "Anonymous"}
+                              {thread.isAnonymous ? "Anonymous" : (thread.creator?.username || "Anonymous")}
                             </span>
                           </div>
                           <div className="flex items-center gap-4">

@@ -70,7 +70,7 @@ export default function ThreadPage({ params }: { params: Promise<{ id: string }>
     setIdentityChoice(useRealName);
     setShowIdentityModal(false);
     if (useRealName) {
-      setMyPseudonym(user?.displayName || user?.email?.split("@")[0] || "You");
+      setMyPseudonym(user?.username || user?.email?.split("@")[0] || "You");
     } else {
       setMyPseudonym("Anonymous (assigned on send)");
     }
@@ -245,6 +245,9 @@ export default function ThreadPage({ params }: { params: Promise<{ id: string }>
               <span className="text-sm font-bold hover:text-primary cursor-pointer transition-colors" style={{ color: "var(--text-primary)" }}>
                 {comment.participant.pseudonym}
               </span>
+              {comment.isCreator && !comment.isMe && (
+                <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-blue-500/10 text-blue-500 border border-blue-500/20 font-bold uppercase tracking-wider">Author</span>
+              )}
               {comment.isMe && (
                 <span className="text-xs px-1.5 py-0.5 rounded bg-primary/10 text-primary border border-primary/20 font-semibold">You</span>
               )}
@@ -456,6 +459,14 @@ export default function ThreadPage({ params }: { params: Promise<{ id: string }>
                   ) : (
                     <>
                       <h1 className="text-xl md:text-2xl font-bold leading-tight mb-3" style={{ color: "var(--text-primary)" }}>{thread.title}</h1>
+                      <div className="flex items-center gap-2 mb-3">
+                        <div className="size-6 rounded relative overflow-hidden ring-1" style={{ background: "var(--surface-hover)", "--tw-ring-color": "var(--surface)" } as React.CSSProperties}>
+                          <div className="absolute inset-0 bg-[conic-gradient(from_90deg_at_50%_50%,_#BAE6FD_0%,_#38BDF8_50%,_#BAE6FD_100%)]"></div>
+                        </div>
+                        <span className="text-sm font-semibold" style={{ color: "var(--text-secondary)" }}>
+                          {thread.isAnonymous ? "Anonymous" : (thread.creator?.username || "Anonymous")}
+                        </span>
+                      </div>
                       {thread.url && <p className="text-sm line-clamp-2 mb-4" style={{ color: "var(--text-secondary)" }}>{thread.url}</p>}
                     </>
                   )}
@@ -594,7 +605,7 @@ export default function ThreadPage({ params }: { params: Promise<{ id: string }>
                       <span className="material-symbols-outlined !text-[18px]">badge</span>
                     </div>
                     <div className="text-left flex-1">
-                      <p className="text-sm font-bold" style={{ color: "var(--text-primary)" }}>{user.displayName || user.email.split("@")[0]}</p>
+                      <p className="text-sm font-bold" style={{ color: "var(--text-primary)" }}>{user.username || user.email.split("@")[0]}</p>
                       <p className="text-[10px]" style={{ color: "var(--text-muted)" }}>Use real name</p>
                     </div>
                     {identityChoice === true && <span className="material-symbols-outlined text-primary !text-[18px]">check_circle</span>}

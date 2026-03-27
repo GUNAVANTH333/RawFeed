@@ -15,6 +15,11 @@ export class CommentService {
     parentId?: string,
     useRealName?: boolean
   ) => {
+    const thread = await prisma.thread.findUnique({
+      where: { id: threadId },
+      select: { creatorId: true },
+    });
+
     const participant = await this.identityService.getOrCreateParticipant(
       userId,
       threadId,
@@ -41,10 +46,16 @@ export class CommentService {
     return {
       ...comment,
       isMe: true,
+      isCreator: thread?.creatorId === userId,
     };
   };
 
   getCommentsByThread = async (threadId: string, userId?: string) => {
+    const thread = await prisma.thread.findUnique({
+      where: { id: threadId },
+      select: { creatorId: true },
+    });
+
     const comments = await prisma.comment.findMany({
       where: { threadId },
       orderBy: { createdAt: "asc" },
@@ -90,7 +101,7 @@ export class CommentService {
       const isHidden = shadowScore < -50;
 
       const { participant, votes, ...rest } = comment;
-      const myVote = Array.isArray(votes) && votes.length > 0 ? votes[0].type : null;
+      const myVote = Array.isArray(votes) && votes.length > 0 ? votes[0]?.type ?? null : null;
 
       return {
         ...rest,
@@ -104,6 +115,7 @@ export class CommentService {
           : comment.content,
         isHidden,
         isMe: userId ? participant.userId === userId : false,
+        isCreator: participant.userId === thread?.creatorId,
         myVote,
       };
     });

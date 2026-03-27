@@ -16,11 +16,12 @@ export class ThreadController {
         return;
       }
 
-      const { title, url, domain, imageUrl } = req.body as {
+      const { title, url, domain, imageUrl, isAnonymous } = req.body as {
         title?: string;
         url?: string;
         domain?: string;
         imageUrl?: string;
+        isAnonymous?: boolean;
       };
 
       if (!title) {
@@ -33,6 +34,7 @@ export class ThreadController {
         ...(url !== undefined && { url }),
         ...(domain !== undefined && { domain }),
         ...(imageUrl !== undefined && { imageUrl }),
+        isAnonymous: isAnonymous === true,
       });
 
       res.status(201).json({
@@ -59,6 +61,20 @@ export class ThreadController {
       const limit = parseInt(req.query["limit"] as string) || 20;
 
       const result = await this.threadService.getAllThreads(page, limit, req.userId);
+
+      res.status(200).json(result);
+    } catch (error) {
+      res.status(500).json({ error: "Internal server error" });
+    }
+  };
+
+  getByUser = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    try {
+      const { username } = req.params as { username: string };
+      const page = parseInt(req.query["page"] as string) || 1;
+      const limit = parseInt(req.query["limit"] as string) || 20;
+
+      const result = await this.threadService.getThreadsByUser(username, page, limit, req.userId);
 
       res.status(200).json(result);
     } catch (error) {

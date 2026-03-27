@@ -18,17 +18,17 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
   return res.json();
 }
 
-export async function register(email: string, password: string) {
-  return request<{ message: string; user: { id: string; email: string; createdAt: string } }>("/api/users/register", {
+export async function register(email: string, password: string, username: string) {
+  return request<{ message: string; user: { id: string; email: string; username: string; createdAt: string } }>("/api/users/register", {
     method: "POST",
-    body: JSON.stringify({ email, password }),
+    body: JSON.stringify({ email, password, username }),
   });
 }
 
-export async function login(email: string, password: string) {
+export async function login(identifier: string, password: string) {
   return request<{ message: string; user: { id: string; email: string; createdAt: string } }>("/api/users/login", {
     method: "POST",
-    body: JSON.stringify({ email, password }),
+    body: JSON.stringify({ identifier, password }),
   });
 }
 
@@ -40,6 +40,24 @@ export async function getProfile() {
   return request<{ user: User }>("/api/users/profile");
 }
 
+export async function updateUsername(username: string) {
+  return request<{ message: string; user: User }>("/api/users/username", {
+    method: "PUT",
+    body: JSON.stringify({ username }),
+  });
+}
+
+export async function updateProfile(data: { bio?: string | null; profilePhoto?: string | null }) {
+  return request<{ message: string; user: User }>("/api/users/profile", {
+    method: "PUT",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function getPublicProfile(username: string) {
+  return request<{ user: User }>(`/api/users/${username}`);
+}
+
 export async function getThreads(page = 1, limit = 20) {
   return request<{ threads: Thread[]; pagination: Pagination }>(`/api/threads?page=${page}&limit=${limit}`);
 }
@@ -48,13 +66,17 @@ export async function getThread(id: string) {
   return request<{ thread: ThreadDetail }>(`/api/threads/${id}`);
 }
 
+export async function getUserThreads(username: string, page = 1, limit = 20) {
+  return request<{ threads: Thread[]; pagination: Pagination }>(`/api/threads/user/${username}?page=${page}&limit=${limit}`);
+}
+
 export async function likeThread(threadId: string) {
   return request<{ liked: boolean; likeCount: number }>(`/api/threads/${threadId}/like`, {
     method: "POST",
   });
 }
 
-export async function createThread(data: { title: string; url?: string; domain?: string; imageUrl?: string }) {
+export async function createThread(data: { title: string; url?: string; domain?: string; imageUrl?: string; isAnonymous?: boolean }) {
   return request<{ message: string; thread: Thread }>("/api/threads", {
     method: "POST",
     body: JSON.stringify(data),
@@ -102,7 +124,9 @@ export async function deleteComment(commentId: string) {
 export interface User {
   id: string;
   email: string;
-  displayName: string | null;
+  username: string;
+  bio?: string | null;
+  profilePhoto?: string | null;
   createdAt: string;
   shadowScore: number;
   isBanned: boolean;
@@ -114,8 +138,10 @@ export interface Thread {
   url: string;
   domain: string;
   imageUrl: string | null;
+  isAnonymous: boolean;
   createdAt: string;
   creatorId: string;
+  creator?: { username: string };
   likeCount: number;
   isLiked: boolean;
   _count?: { comments: number; participants: number };
@@ -151,6 +177,7 @@ export interface Comment {
   _count?: { replies: number };
   isHidden?: boolean;
   isMe?: boolean;
+  isCreator?: boolean;
   myVote?: string | null;
 }
 

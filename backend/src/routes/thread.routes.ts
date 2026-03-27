@@ -14,6 +14,7 @@ router.post(
   threadController.create
 );
 router.get("/", AuthMiddleware.optionalAuthenticate, threadController.getAll);
+router.get("/user/:username", AuthMiddleware.optionalAuthenticate, threadController.getByUser);
 router.get("/:id", AuthMiddleware.optionalAuthenticate, threadController.getById);
 router.put("/:id", AuthMiddleware.authenticate, threadController.update);
 router.delete("/:id", AuthMiddleware.authenticate, threadController.delete);

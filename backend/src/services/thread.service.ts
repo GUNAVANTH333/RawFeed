@@ -10,7 +10,7 @@ export class ThreadService {
 
   createThread = async (
     userId: string,
-    data: { title: string; url?: string; domain?: string; imageUrl?: string }
+    data: { title: string; url?: string; domain?: string; imageUrl?: string; isAnonymous?: boolean }
   ) => {
     const thread = await prisma.thread.create({
       data: {
@@ -18,13 +18,15 @@ export class ThreadService {
         url: data.url || null,
         domain: data.domain || null,
         imageUrl: data.imageUrl || null,
+        isAnonymous: data.isAnonymous ?? false,
         creatorId: userId,
       },
     });
 
     const participant = await this.identityService.getOrCreateParticipant(
       userId,
-      thread.id
+      thread.id,
+      !data.isAnonymous
     );
 
     return {
@@ -44,6 +46,7 @@ export class ThreadService {
         orderBy: { createdAt: "desc" },
         include: {
           _count: { select: { comments: true, participants: true, likes: true } },
+          creator: { select: { username: true } },
           likes: userId ? { where: { userId }, select: { id: true } } : false,
         },
       }),
@@ -66,6 +69,40 @@ export class ThreadService {
     };
   };
 
+  getThreadsByUser = async (username: string, page: number = 1, limit: number = 20, viewerId?: string) => {
+    const skip = (page - 1) * limit;
+
+    const [threads, total] = await Promise.all([
+      prisma.thread.findMany({
+        where: { creator: { username } },
+        skip,
+        take: limit,
+        orderBy: { createdAt: "desc" },
+        include: {
+          _count: { select: { comments: true, participants: true, likes: true } },
+          creator: { select: { username: true } },
+          likes: viewerId ? { where: { userId: viewerId }, select: { id: true } } : false,
+        },
+      }),
+      prisma.thread.count({ where: { creator: { username } } }),
+    ]);
+
+    return {
+      threads: threads.map((t) => ({
+        ...t,
+        likeCount: t._count.likes,
+        isLiked: viewerId ? t.likes.length > 0 : false,
+        likes: undefined,
+      })),
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
+  };
+
   getThreadById = async (threadId: string, userId?: string) => {
     const thread = await prisma.thread.findUnique({
       where: { id: threadId },
@@ -73,6 +110,7 @@ export class ThreadService {
         participants: {
           select: { id: true, pseudonym: true, avatarColor: true, joinedAt: true },
         },
+        creator: { select: { username: true } },
         _count: { select: { comments: true, likes: true } },
         likes: userId ? { where: { userId }, select: { id: true } } : false,
       },

@@ -6,8 +6,8 @@ import { getProfile, login as apiLogin, register as apiRegister, logout as apiLo
 interface AuthContextType {
   user: User | null;
   loading: boolean;
-  login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string) => Promise<void>;
+  login: (identifier: string, password: string) => Promise<void>;
+  register: (email: string, password: string, username: string) => Promise<void>;
   logout: () => Promise<void>;
   refreshProfile: () => Promise<void>;
 }
@@ -38,13 +38,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     refreshProfile().finally(() => setLoading(false));
   }, [refreshProfile]);
 
-  const login = useCallback(async (email: string, password: string) => {
-    await apiLogin(email, password);
+  const login = useCallback(async (identifier: string, password: string) => {
+    await apiLogin(identifier, password);
     await refreshProfile();
   }, [refreshProfile]);
 
-  const register = useCallback(async (email: string, password: string) => {
-    await apiRegister(email, password);
+  const register = useCallback(async (email: string, password: string, username: string) => {
+    await apiRegister(email, password, username);
     await refreshProfile();
   }, [refreshProfile]);
 

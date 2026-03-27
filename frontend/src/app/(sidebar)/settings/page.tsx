@@ -3,14 +3,33 @@
 import { useState } from "react";
 import { useAuth } from "@/lib/AuthContext";
 import { useTheme } from "@/lib/ThemeProvider";
+import { updateUsername } from "@/lib/api";
 import Link from "next/link";
 
 export default function SettingsPage() {
-  const { user, loading, logout } = useAuth();
+  const { user, loading, logout, refreshProfile } = useAuth();
   const { theme, toggleTheme } = useTheme();
 
   const [desktopNotifs, setDesktopNotifs] = useState(true);
   const [criticalAlerts, setCriticalAlerts] = useState(false);
+
+  const [editUsername, setEditUsername] = useState(false);
+  const [newUsername, setNewUsername] = useState("");
+  const [usernameLoading, setUsernameLoading] = useState(false);
+  const [usernameError, setUsernameError] = useState("");
+
+  const handleUpdateUsername = async () => {
+    setUsernameLoading(true);
+    setUsernameError("");
+    try {
+      await updateUsername(newUsername);
+      await refreshProfile();
+      setEditUsername(false);
+    } catch (err: any) {
+      setUsernameError(err.message || "Failed to update username");
+    }
+    setUsernameLoading(false);
+  };
 
   if (loading) {
     return (
@@ -60,6 +79,52 @@ export default function SettingsPage() {
                 <p className="font-semibold" style={{ color: "var(--text-primary)" }}>Email Address</p>
                 <p className="text-sm" style={{ color: "var(--text-muted)" }}>{user.email}</p>
               </div>
+            </div>
+            {/* Username */}
+            <div className="p-6 flex items-center justify-between" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
+              {editUsername ? (
+                <div className="flex-1 flex flex-col gap-2 relative">
+                  <p className="font-semibold" style={{ color: "var(--text-primary)" }}>Edit Username</p>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      className="px-3 py-2 rounded-lg bg-sky-50 dark:bg-slate-800 border border-sky-100 dark:border-slate-700 text-[var(--text-primary)] text-sm focus:ring-2 focus:ring-primary/50 outline-none w-full max-w-sm"
+                      placeholder={user.username}
+                      value={newUsername}
+                      onChange={(e) => setNewUsername(e.target.value)}
+                    />
+                    <button
+                      onClick={handleUpdateUsername}
+                      disabled={usernameLoading || !newUsername.trim()}
+                      className="px-4 py-2 bg-primary hover:bg-primary-dark text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
+                    >
+                      {usernameLoading ? "Saving..." : "Save"}
+                    </button>
+                    <button
+                      onClick={() => { setEditUsername(false); setNewUsername(""); setUsernameError(""); }}
+                      className="px-4 py-2 bg-gray-200 dark:bg-slate-700 hover:bg-gray-300 dark:hover:bg-slate-600 rounded-lg text-sm font-medium transition-colors"
+                      style={{ color: "var(--text-primary)" }}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                  {usernameError && <p className="text-red-500 text-xs">{usernameError}</p>}
+                </div>
+              ) : (
+                <>
+                  <div>
+                    <p className="font-semibold" style={{ color: "var(--text-primary)" }}>Username</p>
+                    <p className="text-sm" style={{ color: "var(--text-muted)" }}>{user.username}</p>
+                  </div>
+                  <button
+                    onClick={() => { setEditUsername(true); setNewUsername(user.username); }}
+                    className="px-4 py-2 text-sm font-medium rounded-lg transition-colors"
+                    style={{ background: "var(--surface-hover)", color: "var(--text-secondary)", border: "1px solid var(--border-subtle)" }}
+                  >
+                    Change
+                  </button>
+                </>
+              )}
             </div>
             {/* Password */}
             <div className="p-6 flex items-center justify-between">

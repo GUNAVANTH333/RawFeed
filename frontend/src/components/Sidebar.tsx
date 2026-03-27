@@ -16,8 +16,8 @@ export default function Sidebar() {
   const { user } = useAuth();
   const { theme, toggleTheme } = useTheme();
 
-  const initials = user?.displayName
-    ? user.displayName.split(" ").map((w) => w[0]).join("").toUpperCase()
+  const initials = user?.username
+    ? user.username[0].toUpperCase()
     : user?.email?.[0]?.toUpperCase() || "?";
 
   return (
@@ -81,16 +81,20 @@ export default function Sidebar() {
 
       <div className="p-4" style={{ borderTop: "1px solid var(--border-subtle)" }}>
         {user ? (
-          <div className="flex items-center gap-3 px-4 py-3">
-            <div className="size-8 rounded-full bg-sky-200 flex items-center justify-center overflow-hidden relative">
-              <div className="absolute inset-0 opacity-50 bg-[conic-gradient(at_top,_var(--tw-gradient-stops))] from-sky-900 via-sky-500 to-sky-900"></div>
-              <span className="relative text-xs font-bold" style={{ color: "var(--text-primary)" }}>{initials}</span>
+          <Link href={`/${user.username}`} className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 transition-colors cursor-pointer group">
+            {user.profilePhoto ? (
+              <img src={user.profilePhoto} alt={user.username} className="size-8 rounded-full object-cover" />
+            ) : (
+              <div className="size-8 rounded-full bg-sky-200 flex items-center justify-center overflow-hidden relative">
+                <div className="absolute inset-0 opacity-50 bg-[conic-gradient(at_top,_var(--tw-gradient-stops))] from-sky-900 via-sky-500 to-sky-900"></div>
+                <span className="relative text-xs font-bold" style={{ color: "var(--text-primary)" }}>{initials}</span>
+              </div>
+            )}
+            <div className="flex flex-col flex-1 min-w-0">
+              <span className="text-sm font-semibold truncate group-hover:text-primary transition-colors" style={{ color: "var(--text-primary)" }}>{user.username || user.email.split("@")[0]}</span>
+              <span className="text-xs truncate" style={{ color: "var(--text-muted)" }}>{user.email}</span>
             </div>
-            <div className="flex flex-col">
-              <span className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>{user.displayName || user.email.split("@")[0]}</span>
-              <span className="text-xs" style={{ color: "var(--text-muted)" }}>{user.email}</span>
-            </div>
-          </div>
+          </Link>
         ) : (
           <Link
             href="/login"
