@@ -1,12 +1,29 @@
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 
+// Helper function to read the cookie in the browser
+function getCsrfToken() {
+  if (typeof document !== "undefined") {
+    const match = document.cookie.match(/(^|;)\s*csrf_token\s*=\s*([^;]+)/);
+    return match ? match[2] : null;
+  }
+  return null;
+}
+
 async function request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
+  // Get the token and add it to the headers
+  const csrfToken = getCsrfToken();
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    ...options.headers as Record<string, string>,
+  };
+
+  if (csrfToken) {
+    headers["x-csrf-token"] = csrfToken;
+  }
+
   const res = await fetch(`${API_URL}${endpoint}`, {
-    credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      ...options.headers,
-    },
+    credentials: "include", // This ensures cookies are sent
+    headers,
     ...options,
   });
 
@@ -17,7 +34,6 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
 
   return res.json();
 }
-
 export async function register(email: string, password: string, username: string) {
   return request<{ message: string; user: { id: string; email: string; username: string; createdAt: string } }>("/api/users/register", {
     method: "POST",
