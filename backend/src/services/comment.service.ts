@@ -82,7 +82,7 @@ export class CommentService {
 
     if (comments.length > 0) {
       const participantUserIds = [
-        ...new Set(comments.map((c) => c.participant.userId)),
+        ...new Set(comments.map((c:any) => c.participant.userId)),
       ];
 
       const users = await prisma.user.findMany({

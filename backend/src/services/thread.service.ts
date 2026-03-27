@@ -54,7 +54,7 @@ export class ThreadService {
     ]);
 
     return {
-      threads: threads.map((t) => ({
+      threads: threads.map((t:any) => ({
         ...t,
         likeCount: t._count.likes,
         isLiked: userId ? t.likes.length > 0 : false,
