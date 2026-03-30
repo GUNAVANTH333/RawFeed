@@ -63,6 +63,11 @@ export class UserController {
         return;
       }
 
+      if (!user.password) {
+        res.status(401).json({ error: "This account uses Google Sign-In. Please log in with Google." });
+        return;
+      }
+
       const isPasswordValid = await this.userService.comparePasswords(password, user.password);
 
       if (!isPasswordValid) {

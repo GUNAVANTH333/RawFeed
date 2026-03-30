@@ -124,6 +124,7 @@ export class CommentService {
           pseudonym: participant.pseudonym,
           avatarColor: participant.avatarColor,
           profilePhoto: isAnonymous ? null : participant.user?.profilePhoto,
+          isAnonymous,
         },
         content: isHidden
           ? "[Hidden by Community Standards]"

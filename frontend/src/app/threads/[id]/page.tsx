@@ -79,11 +79,10 @@ export default function ThreadPage({ params }: { params: Promise<{ id: string }>
   const handleComment = async () => {
     if (!newComment.trim() || submitting) return;
 
-    if (!myPseudonym || identityChoice === null) {
-      if (!thread?.myPseudonym) {
-        setShowIdentityModal(true);
-        return;
-      }
+    const hasExistingParticipation = !!thread?.myPseudonym || !!myPseudonym;
+    if (!hasExistingParticipation && identityChoice === null) {
+      setShowIdentityModal(true);
+      return;
     }
 
     setSubmitting(true);
@@ -92,8 +91,8 @@ export default function ThreadPage({ params }: { params: Promise<{ id: string }>
       const { comment } = await createComment(id, newComment.trim(), undefined, useRealName);
       setComments((prev) => [...prev, comment]);
       setNewComment("");
-      setMyPseudonym(comment.participant.pseudonym);
-      setIdentityChoice(null);
+      // Lock in the pseudonym forever for this session — never reset identityChoice
+      if (!myPseudonym) setMyPseudonym(comment.participant.pseudonym);
     } catch {}
     setSubmitting(false);
   };
@@ -101,11 +100,11 @@ export default function ThreadPage({ params }: { params: Promise<{ id: string }>
   const handleReply = async (parentId: string) => {
     if (!replyText.trim() || submitting) return;
 
-    if (!myPseudonym || identityChoice === null) {
-      if (!thread?.myPseudonym) {
-        setShowIdentityModal(true);
-        return;
-      }
+    // Same rule: show identity modal only if this is absolutely the first interaction
+    const hasExistingParticipation = !!thread?.myPseudonym || !!myPseudonym;
+    if (!hasExistingParticipation && identityChoice === null) {
+      setShowIdentityModal(true);
+      return;
     }
 
     setSubmitting(true);
@@ -115,8 +114,8 @@ export default function ThreadPage({ params }: { params: Promise<{ id: string }>
       setComments((prev) => [...prev, comment]);
       setReplyText("");
       setReplyingTo(null);
-      setMyPseudonym(comment.participant.pseudonym);
-      setIdentityChoice(null);
+      // Lock in the pseudonym — never reset identityChoice
+      if (!myPseudonym) setMyPseudonym(comment.participant.pseudonym);
     } catch {}
     setSubmitting(false);
   };
@@ -251,9 +250,19 @@ export default function ThreadPage({ params }: { params: Promise<{ id: string }>
           </div>
           <div className="flex-1 pb-2">
             <div className="flex items-center gap-2 mb-1">
-              <span className="text-sm font-bold hover:text-primary cursor-pointer transition-colors" style={{ color: "var(--text-primary)" }}>
-                {comment.participant.pseudonym}
-              </span>
+              {!comment.participant.isAnonymous ? (
+                <Link
+                  href={`/${comment.participant.pseudonym}`}
+                  className="text-sm font-bold hover:text-primary cursor-pointer transition-colors"
+                  style={{ color: "var(--text-primary)" }}
+                >
+                  {comment.participant.pseudonym}
+                </Link>
+              ) : (
+                <span className="text-sm font-bold" style={{ color: "var(--text-primary)" }}>
+                  {comment.participant.pseudonym}
+                </span>
+              )}
               {comment.isCreator && !comment.isMe && (
                 <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-blue-500/10 text-blue-500 border border-blue-500/20 font-bold uppercase tracking-wider">Author</span>
               )}

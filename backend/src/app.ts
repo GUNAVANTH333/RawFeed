@@ -1,9 +1,11 @@
 import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
+import passport from "./utils/googleOAuth.js";
 import userRoutes from "./routes/user.routes.js";
 import threadRoutes from "./routes/thread.routes.js";
 import commentRoutes from "./routes/comment.routes.js";
+import authRoutes from "./routes/auth.routes.js";
 
 const app = express();
 
@@ -13,10 +15,12 @@ app.use(cors({
 }));
 app.use(express.json());
 app.use(cookieParser());
+app.use(passport.initialize());
 
 app.use("/api/users", userRoutes);
 app.use("/api/threads", threadRoutes);
 app.use("/api", commentRoutes);
+app.use("/api/auth", authRoutes);
 
 app.get("/health", (_req, res) => {
   res.status(200).json({ status: "ok" });

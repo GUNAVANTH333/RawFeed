@@ -191,6 +191,7 @@ export interface Comment {
     pseudonym: string;
     avatarColor: string;
     profilePhoto?: string | null;
+    isAnonymous?: boolean;
   };
   _count?: { replies: number };
   isHidden?: boolean;
