@@ -115,7 +115,7 @@ export default function HomePage() {
         <div className="flex-1 overflow-y-auto overflow-x-hidden p-6 scroll-smooth">
           <div className="max-w-[700px] mx-auto flex flex-col gap-6 pb-20">
             {/* Category Filter Tabs */}
-            <div className="flex gap-2 pb-2 overflow-x-auto no-scrollbar">
+            {/* <div className="flex gap-2 pb-2 overflow-x-auto no-scrollbar">
               {categories.map((cat) => (
                 <button
                   key={cat}
@@ -134,7 +134,7 @@ export default function HomePage() {
                   {cat}
                 </button>
               ))}
-            </div>
+            </div> */}
 
             {/* Thread Cards */}
             {loading ? (
@@ -177,11 +177,21 @@ export default function HomePage() {
                         <h3 className="text-2xl font-bold mb-2 leading-tight hover:text-primary transition-colors" style={{ color: "var(--text-primary)" }}>
                           {thread.title}
                         </h3>
-                        {thread.url && (
-                          <p className="text-sm line-clamp-2 mb-4 leading-relaxed" style={{ color: "var(--text-secondary)" }}>
-                            {thread.url}
-                          </p>
-                        )}
+                        {thread.description && (() => {
+                          const words = thread.description.split(" ");
+                          const isLong = words.length > 50;
+                          const preview = isLong ? words.slice(0, 50).join(" ") + "…" : thread.description;
+                          return (
+                            <p className="text-sm mb-4 leading-relaxed" style={{ color: "var(--text-secondary)" }}>
+                              {preview}
+                              {isLong && (
+                                <span className="font-semibold ml-1 hover:underline" style={{ color: "var(--color-primary)" }}>
+                                  Read more →
+                                </span>
+                              )}
+                            </p>
+                          );
+                        })()}
                         <div className="flex items-center justify-between pt-4" style={{ borderTop: "1px solid var(--border-subtle)" }}>
                           <div className="flex items-center gap-3">
                             <div className="size-8 rounded relative overflow-hidden ring-2" style={{ background: "var(--surface-hover)", "--tw-ring-color": "var(--surface)" } as React.CSSProperties}>
