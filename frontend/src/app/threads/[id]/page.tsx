@@ -234,11 +234,20 @@ export default function ThreadPage({ params }: { params: Promise<{ id: string }>
         {!isTopLevel && <div className="thread-line-curved"></div>}
         <div className="flex gap-4">
           <div className="flex flex-col items-center shrink-0 z-10">
-            <div className={`${avatarSize} rounded-full ${ringColors[ci]} ring-2 p-0.5 shadow-sm`} style={{ background: "var(--surface)" }}>
-              <div className={`w-full h-full rounded-full ${bgColors[ci]} flex items-center justify-center ${textColors[ci]} font-bold ${fontSize} select-none`}>
-                {initial}
+            {comment.participant.profilePhoto ? (
+              <img
+                src={comment.participant.profilePhoto}
+                alt={`${comment.participant.pseudonym}'s profile`}
+                className={`${avatarSize} rounded-full object-cover ring-2 ${ringColors[ci]} p-0.5 shadow-sm`}
+                style={{ background: "var(--surface)" }}
+              />
+            ) : (
+              <div className={`${avatarSize} rounded-full ${ringColors[ci]} ring-2 p-0.5 shadow-sm`} style={{ background: "var(--surface)" }}>
+                <div className={`w-full h-full rounded-full ${bgColors[ci]} flex items-center justify-center ${textColors[ci]} font-bold ${fontSize} select-none`}>
+                  {initial}
+                </div>
               </div>
-            </div>
+            )}
           </div>
           <div className="flex-1 pb-2">
             <div className="flex items-center gap-2 mb-1">

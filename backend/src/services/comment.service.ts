@@ -38,13 +38,23 @@ export class CommentService {
           select: {
             pseudonym: true,
             avatarColor: true,
+            user: {
+              select: { username: true, profilePhoto: true }
+            }
           },
         },
       },
     });
 
+    const isAnonymous = comment.participant.pseudonym !== comment.participant.user.username;
+
     return {
       ...comment,
+      participant: {
+        pseudonym: comment.participant.pseudonym,
+        avatarColor: comment.participant.avatarColor,
+        profilePhoto: isAnonymous ? null : comment.participant.user.profilePhoto,
+      },
       isMe: true,
       isCreator: thread?.creatorId === userId,
     };
@@ -66,6 +76,9 @@ export class CommentService {
             userId: true,
             pseudonym: true,
             avatarColor: true,
+            user: {
+              select: { username: true, profilePhoto: true }
+            }
           },
         },
         _count: { select: { replies: true } },
@@ -102,6 +115,7 @@ export class CommentService {
 
       const { participant, votes, ...rest } = comment;
       const myVote = Array.isArray(votes) && votes.length > 0 ? votes[0]?.type ?? null : null;
+      const isAnonymous = participant.pseudonym !== participant.user.username;
 
       return {
         ...rest,
@@ -109,6 +123,7 @@ export class CommentService {
           id: participant.id,
           pseudonym: participant.pseudonym,
           avatarColor: participant.avatarColor,
+          profilePhoto: isAnonymous ? null : participant.user?.profilePhoto,
         },
         content: isHidden
           ? "[Hidden by Community Standards]"
