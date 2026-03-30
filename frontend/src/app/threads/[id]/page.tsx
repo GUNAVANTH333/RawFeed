@@ -468,6 +468,11 @@ export default function ThreadPage({ params }: { params: Promise<{ id: string }>
                   ) : (
                     <>
                       <h1 className="text-xl md:text-2xl font-bold leading-tight mb-3" style={{ color: "var(--text-primary)" }}>{thread.title}</h1>
+                      {thread.description && (
+                        <p className="text-sm md:text-base leading-relaxed whitespace-pre-wrap mb-4" style={{ color: "var(--text-primary)", opacity: 0.9 }}>
+                          {thread.description}
+                        </p>
+                      )}
                       <div className="flex items-center gap-2 mb-3">
                         <div className="size-6 rounded relative overflow-hidden ring-1" style={{ background: "var(--surface-hover)", "--tw-ring-color": "var(--surface)" } as React.CSSProperties}>
                           <div className="absolute inset-0 bg-[conic-gradient(from_90deg_at_50%_50%,_#BAE6FD_0%,_#38BDF8_50%,_#BAE6FD_100%)]"></div>

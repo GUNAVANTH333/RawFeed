@@ -92,7 +92,7 @@ export async function likeThread(threadId: string) {
   });
 }
 
-export async function createThread(data: { title: string; url?: string; domain?: string; imageUrl?: string; isAnonymous?: boolean }) {
+export async function createThread(data: { title: string; description?: string; url?: string; domain?: string; imageUrl?: string; isAnonymous?: boolean }) {
   return request<{ message: string; thread: Thread }>("/api/threads", {
     method: "POST",
     body: JSON.stringify(data),
@@ -151,6 +151,7 @@ export interface User {
 export interface Thread {
   id: string;
   title: string;
+  description?: string | null;
   url: string;
   domain: string;
   imageUrl: string | null;

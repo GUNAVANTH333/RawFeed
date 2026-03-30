@@ -48,7 +48,7 @@ export default function NewThreadPage() {
     setError("");
 
     try {
-      const result = await createThread({ title: title.trim(), isAnonymous });
+      const result = await createThread({ title: title.trim(), description: content.trim() || undefined, isAnonymous });
       router.push(`/threads/${result.thread.id}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to create thread");

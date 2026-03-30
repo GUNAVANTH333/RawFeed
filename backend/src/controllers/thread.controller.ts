@@ -16,8 +16,9 @@ export class ThreadController {
         return;
       }
 
-      const { title, url, domain, imageUrl, isAnonymous } = req.body as {
+      const { title, description, url, domain, imageUrl, isAnonymous } = req.body as {
         title?: string;
+        description?: string;
         url?: string;
         domain?: string;
         imageUrl?: string;
@@ -31,6 +32,7 @@ export class ThreadController {
 
       const thread = await this.threadService.createThread(req.userId, {
         title,
+        ...(description !== undefined && { description }),
         ...(url !== undefined && { url }),
         ...(domain !== undefined && { domain }),
         ...(imageUrl !== undefined && { imageUrl }),
@@ -51,6 +53,7 @@ export class ThreadController {
           .json({ error: "A thread with this URL already exists" });
         return;
       }
+      console.error("[Create Thread Error]:", error);
       res.status(500).json({ error: "Internal server error" });
     }
   };

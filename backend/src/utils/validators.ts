@@ -36,6 +36,7 @@ export const CreateThreadSchema = z.object({
     .string()
     .min(1, "Title is required")
     .max(300, "Title must be at most 300 characters"),
+  description: z.string().max(5000, "Description must be at most 5000 characters").optional(),
   url: z.string().url("Invalid URL format").optional(),
   domain: z.string().optional(),
   imageUrl: z.string().url("Invalid image URL").optional(),

@@ -30,6 +30,7 @@ model Thread {
   url         String?
   domain      String?
   title       String
+  description String?
   imageUrl    String?
   isAnonymous Boolean  @default(false)
   createdAt   DateTime @default(now())

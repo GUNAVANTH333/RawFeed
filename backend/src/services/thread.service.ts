@@ -10,11 +10,12 @@ export class ThreadService {
 
   createThread = async (
     userId: string,
-    data: { title: string; url?: string; domain?: string; imageUrl?: string; isAnonymous?: boolean }
+    data: { title: string; description?: string; url?: string; domain?: string; imageUrl?: string; isAnonymous?: boolean }
   ) => {
     const thread = await prisma.thread.create({
       data: {
         title: data.title,
+        description: data.description || null,
         url: data.url || null,
         domain: data.domain || null,
         imageUrl: data.imageUrl || null,
