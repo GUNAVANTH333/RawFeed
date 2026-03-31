@@ -1,5 +1,6 @@
 import prisma from "../utils/prisma.js";
 import { IdentityService } from "./identity.service.js";
+import { createNotification } from "./notification.service.js";
 
 export class CommentService {
   private identityService: IdentityService;
@@ -48,12 +49,55 @@ export class CommentService {
 
     const isAnonymous = comment.participant.pseudonym !== comment.participant.user.username;
 
+    // --- Fire notifications (non-blocking, best-effort) ---
+    const thread_full = await prisma.thread.findUnique({
+      where: { id: threadId },
+      select: { creatorId: true, title: true },
+    });
+
+    if (thread_full) {
+      const actorPseudonym = comment.participant.pseudonym;
+
+      if (parentId) {
+        // Reply to a comment: notify the parent comment's author
+        const parentComment = await prisma.comment.findUnique({
+          where: { id: parentId },
+          include: { participant: { select: { userId: true } } },
+        });
+        const parentAuthorId = parentComment?.participant.userId;
+        if (parentAuthorId && parentAuthorId !== userId) {
+          createNotification({
+            type: "REPLY_TO_COMMENT",
+            recipientId: parentAuthorId,
+            actorPseudonym,
+            threadId,
+            threadTitle: thread_full.title,
+            commentId: comment.id,
+          }).catch(() => {});
+        }
+      } else {
+        // Top-level comment: notify the thread creator
+        if (thread_full.creatorId !== userId) {
+          createNotification({
+            type: "COMMENT_ON_THREAD",
+            recipientId: thread_full.creatorId,
+            actorPseudonym,
+            threadId,
+            threadTitle: thread_full.title,
+            commentId: comment.id,
+          }).catch(() => {});
+        }
+      }
+    }
+    // -------------------------------------------------------
+
     return {
       ...comment,
       participant: {
         pseudonym: comment.participant.pseudonym,
         avatarColor: comment.participant.avatarColor,
         profilePhoto: isAnonymous ? null : comment.participant.user.profilePhoto,
+        isAnonymous,
       },
       isMe: true,
       isCreator: thread?.creatorId === userId,

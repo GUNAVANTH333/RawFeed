@@ -206,3 +206,26 @@ export interface Pagination {
   total: number;
   totalPages: number;
 }
+
+export interface Notification {
+  id: string;
+  type: "COMMENT_ON_THREAD" | "REPLY_TO_COMMENT";
+  isRead: boolean;
+  createdAt: string;
+  actorPseudonym: string;
+  threadId: string;
+  threadTitle: string;
+  commentId: string;
+}
+
+export async function getNotifications(): Promise<{ notifications: Notification[]; unreadCount: number }> {
+  return request("/api/notifications");
+}
+
+export async function markAllNotificationsRead(): Promise<void> {
+  return request("/api/notifications/read-all", { method: "PUT" });
+}
+
+export async function markNotificationRead(id: string): Promise<void> {
+  return request(`/api/notifications/${id}/read`, { method: "PUT" });
+}

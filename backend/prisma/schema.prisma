@@ -22,6 +22,7 @@ model User {
   submittedThreads Thread[]
   votes            Vote[]
   threadLikes      ThreadLike[]
+  notifications    Notification[]
 
   @@map("users")
 }
@@ -119,4 +120,24 @@ model WhitelistDomain {
   addedAt     DateTime @default(now())
   
   @@map("whitelist_domains")
+}
+
+model Notification {
+  id          String   @id @default(uuid())
+  type        String   // "COMMENT_ON_THREAD" | "REPLY_TO_COMMENT"
+  isRead      Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  // The user who should receive this notification
+  recipientId String
+  recipient   User     @relation(fields: [recipientId], references: [id], onDelete: Cascade)
+
+  // Context fields for rendering the notification
+  threadId          String
+  threadTitle       String
+  commentId         String
+  actorPseudonym    String   // pseudonym of who triggered it
+
+  @@index([recipientId, isRead])
+  @@map("notifications")
 }

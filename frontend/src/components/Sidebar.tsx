@@ -2,23 +2,46 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useState, useCallback } from "react";
 import { useAuth } from "@/lib/AuthContext";
 import { useTheme } from "@/lib/ThemeProvider";
-
-const navItems = [
-  { href: "/", label: "Home", icon: "home" },
-  { href: "/new-thread", label: "New Thread", icon: "add_box" },
-  { href: "/notifications", label: "Notifications", icon: "notifications" },
-];
+import { getNotifications } from "@/lib/api";
 
 export default function Sidebar() {
   const pathname = usePathname();
   const { user } = useAuth();
   const { theme, toggleTheme } = useTheme();
+  const [unreadCount, setUnreadCount] = useState(0);
 
   const initials = user?.username
     ? user.username[0].toUpperCase()
     : user?.email?.[0]?.toUpperCase() || "?";
+
+  const fetchUnread = useCallback(async () => {
+    if (!user) return;
+    try {
+      const data = await getNotifications();
+      setUnreadCount(data.unreadCount);
+    } catch {}
+  }, [user]);
+
+  useEffect(() => {
+    fetchUnread();
+    // Poll every 30 seconds for new notifications
+    const interval = setInterval(fetchUnread, 30000);
+    return () => clearInterval(interval);
+  }, [fetchUnread]);
+
+  // Reset badge when user visits notifications page
+  useEffect(() => {
+    if (pathname === "/notifications") setUnreadCount(0);
+  }, [pathname]);
+
+  const navItems = [
+    { href: "/", label: "Home", icon: "home" },
+    { href: "/new-thread", label: "New Thread", icon: "add_box" },
+    { href: "/notifications", label: "Notifications", icon: "notifications", badge: unreadCount },
+  ];
 
   return (
     <aside
@@ -47,8 +70,18 @@ export default function Sidebar() {
                 : { color: "var(--text-secondary)" }
               }
             >
-              <span className={`material-symbols-outlined text-[24px] ${isActive ? "fill-1" : ""}`}>
-                {item.icon}
+              <span className="relative">
+                <span className={`material-symbols-outlined text-[24px] ${isActive ? "fill-1" : ""}`}>
+                  {item.icon}
+                </span>
+                {item.badge && item.badge > 0 ? (
+                  <span
+                    className="absolute -top-1 -right-1.5 min-w-[16px] h-4 rounded-full text-[10px] font-bold text-white flex items-center justify-center px-1"
+                    style={{ background: "var(--color-primary)", lineHeight: 1 }}
+                  >
+                    {item.badge > 99 ? "99+" : item.badge}
+                  </span>
+                ) : null}
               </span>
               <span className="text-sm font-medium">{item.label}</span>
             </Link>
