@@ -83,7 +83,7 @@ export default function LoginPage() {
           </div>
 
           <a
-            href="http://localhost:3001/api/auth/google"
+            href={`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001"}/api/auth/google`}
             className="w-full flex items-center justify-center gap-3 py-3 px-4 rounded-lg border font-semibold text-sm transition-all hover:bg-[var(--surface-hover)] active:scale-95"
             style={{ border: "1px solid var(--border-subtle)", color: "var(--text-primary)" }}
           >
