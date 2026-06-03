@@ -5,7 +5,7 @@ import { generateToken } from "../utils/jwt.js";
 
 const router = Router();
 
-const CLIENT_URL = process.env["CLIENT_URL"] ?? "http://localhost:3000";
+const CLIENT_URL = process.env["CLIENT_URL"] ?? "http://localhost:3001";
 const GOOGLE_SCOPES = ["profile", "email"];
 
 // Step 1: Redirect user to Google's consent screen

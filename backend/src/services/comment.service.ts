@@ -47,7 +47,7 @@ export class CommentService {
       },
     });
 
-    const isAnonymous = comment.participant.pseudonym !== comment.participant.user.username;
+    const isAnonymous = participant.isAnonymous;
 
     // --- Fire notifications (non-blocking, best-effort) ---
     const thread_full = await prisma.thread.findUnique({
@@ -120,6 +120,7 @@ export class CommentService {
             userId: true,
             pseudonym: true,
             avatarColor: true,
+            isAnonymous: true,
             user: {
               select: { username: true, profilePhoto: true }
             }
@@ -136,7 +137,7 @@ export class CommentService {
     });
 
     const userShadowScores = new Map<string, number>();
-
+    const userName = new Map<string, string>();
     if (comments.length > 0) {
       const participantUserIds = [
         ...new Set(comments.map((c:any) => c.participant.userId)),
@@ -144,31 +145,34 @@ export class CommentService {
 
       const users = await prisma.user.findMany({
         where: { id: { in: participantUserIds } },
-        select: { id: true, shadowScore: true },
+        select: { id: true, username:true, shadowScore: true },
       });
 
       for (const user of users) {
         userShadowScores.set(user.id, user.shadowScore);
+        userName.set(user.id, user.username);
       }
+
     }
 
     const enrichedComments = comments.map((comment) => {
       const shadowScore =
         userShadowScores.get(comment.participant.userId) ?? 0;
+      const user = userName.get(comment.participant.userId)
+      
       const isHidden = shadowScore < -50;
 
       const { participant, votes, ...rest } = comment;
       const myVote = Array.isArray(votes) && votes.length > 0 ? votes[0]?.type ?? null : null;
-      const isAnonymous = participant.pseudonym !== participant.user.username;
-
+      const pseudonym = participant.isAnonymous? participant.pseudonym : user;
       return {
         ...rest,
         participant: {
           id: participant.id,
-          pseudonym: participant.pseudonym,
+          pseudonym: pseudonym,
           avatarColor: participant.avatarColor,
-          profilePhoto: isAnonymous ? null : participant.user?.profilePhoto,
-          isAnonymous,
+          profilePhoto: participant.isAnonymous ? null : participant.user?.profilePhoto,
+          isAnonymous: participant.isAnonymous,
         },
         content: isHidden
           ? "[Hidden by Community Standards]"

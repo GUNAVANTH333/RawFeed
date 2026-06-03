@@ -38,6 +38,7 @@ export class IdentityService {
 
     let pseudonym: string;
     let avatarColor: string;
+    let isAnonymous: boolean;
 
     if (useRealName) {
       const user = await prisma.user.findUnique({
@@ -46,9 +47,11 @@ export class IdentityService {
       });
       pseudonym = user?.username || user?.email?.split("@")[0] || "User";
       avatarColor = this.generateAvatarColor(userId, threadId);
+      isAnonymous = false
     } else {
       pseudonym = this.generatePseudonym(userId, threadId);
       avatarColor = this.generateAvatarColor(userId, threadId);
+      isAnonymous = true;
     }
 
     const participant = await prisma.threadParticipant.create({
@@ -57,6 +60,7 @@ export class IdentityService {
         threadId,
         pseudonym,
         avatarColor,
+        isAnonymous,
       },
     });
 

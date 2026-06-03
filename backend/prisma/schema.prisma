@@ -7,16 +7,16 @@ datasource db {
 }
 
 model User {
-  id            String    @id @default(uuid())
-  email         String    @unique
-  username      String    @unique
-  password      String?
-  googleId      String?   @unique
-  createdAt     DateTime  @default(now())
-  shadowScore   Int       @default(0)
-  isBanned      Boolean   @default(false)
-  bio           String?
-  profilePhoto  String?
+  id           String   @id @default(uuid())
+  email        String   @unique
+  username     String   @unique
+  password     String?
+  googleId     String?  @unique
+  createdAt    DateTime @default(now())
+  shadowScore  Int      @default(0)
+  isBanned     Boolean  @default(false)
+  bio          String?
+  profilePhoto String?
 
   participations   ThreadParticipant[]
   submittedThreads Thread[]
@@ -37,8 +37,8 @@ model Thread {
   isAnonymous Boolean  @default(false)
   createdAt   DateTime @default(now())
 
-  creatorId   String
-  creator     User     @relation(fields: [creatorId], references: [id])
+  creatorId String
+  creator   User   @relation(fields: [creatorId], references: [id])
 
   comments     Comment[]
   participants ThreadParticipant[]
@@ -54,32 +54,33 @@ model ThreadParticipant {
   threadId    String
   pseudonym   String
   avatarColor String
+  isAnonymous Boolean
   joinedAt    DateTime @default(now())
 
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  thread      Thread   @relation(fields: [threadId], references: [id], onDelete: Cascade)
-  comments    Comment[]
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  thread   Thread    @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  comments Comment[]
 
   @@unique([userId, threadId])
   @@map("thread_participants")
 }
 
 model Comment {
-  id            String   @id @default(uuid())
-  content       String
-  createdAt     DateTime @default(now())
-  upvotes       Int      @default(0)
-  downvotes     Int      @default(0)
+  id        String   @id @default(uuid())
+  content   String
+  createdAt DateTime @default(now())
+  upvotes   Int      @default(0)
+  downvotes Int      @default(0)
 
   participantId String
   threadId      String
   parentId      String?
 
-  participant   ThreadParticipant @relation(fields: [participantId], references: [id])
-  thread        Thread            @relation(fields: [threadId], references: [id], onDelete: Cascade)
-  parent        Comment?          @relation("CommentReplies", fields: [parentId], references: [id])
-  replies       Comment[]         @relation("CommentReplies")
-  votes         Vote[]
+  participant ThreadParticipant @relation(fields: [participantId], references: [id])
+  thread      Thread            @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  parent      Comment?          @relation("CommentReplies", fields: [parentId], references: [id])
+  replies     Comment[]         @relation("CommentReplies")
+  votes       Vote[]
 
   @@map("comments")
 }
@@ -92,8 +93,8 @@ model Vote {
   userId    String
   commentId String
 
-  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  comment   Comment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  comment Comment @relation(fields: [commentId], references: [id], onDelete: Cascade)
 
   @@unique([userId, commentId])
   @@map("votes")
@@ -114,29 +115,29 @@ model ThreadLike {
 }
 
 model WhitelistDomain {
-  id          String   @id @default(uuid())
-  domain      String   @unique
-  trustScore  Int      @default(100)
-  addedAt     DateTime @default(now())
-  
+  id         String   @id @default(uuid())
+  domain     String   @unique
+  trustScore Int      @default(100)
+  addedAt    DateTime @default(now())
+
   @@map("whitelist_domains")
 }
 
 model Notification {
-  id          String   @id @default(uuid())
-  type        String   // "COMMENT_ON_THREAD" | "REPLY_TO_COMMENT"
-  isRead      Boolean  @default(false)
-  createdAt   DateTime @default(now())
+  id        String   @id @default(uuid())
+  type      String // "COMMENT_ON_THREAD" | "REPLY_TO_COMMENT"
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
 
   // The user who should receive this notification
   recipientId String
-  recipient   User     @relation(fields: [recipientId], references: [id], onDelete: Cascade)
+  recipient   User   @relation(fields: [recipientId], references: [id], onDelete: Cascade)
 
   // Context fields for rendering the notification
-  threadId          String
-  threadTitle       String
-  commentId         String
-  actorPseudonym    String   // pseudonym of who triggered it
+  threadId       String
+  threadTitle    String
+  commentId      String
+  actorPseudonym String // pseudonym of who triggered it
 
   @@index([recipientId, isRead])
   @@map("notifications")

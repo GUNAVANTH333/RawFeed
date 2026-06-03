@@ -11,7 +11,7 @@ import notificationRoutes from "./routes/notification.routes.js";
 const app = express();
 
 app.use(cors({
-  origin: [process.env["CLIENT_URL"] as string, "http://localhost:3000"],
+  origin: [process.env["CLIENT_URL"] as string, "http://localhost:3002"],
   credentials: true,
 }));
 app.use(express.json());
