@@ -55,15 +55,20 @@ export class ThreadService {
     ]);
 
     return {
-      threads: threads.map((t:any) => ({
-        ...t,
-        likeCount: t._count.likes,
-        isLiked: userId ? t.likes.length > 0 : false,
-        likes: undefined,
-        creatorPseudonym: t.isAnonymous
-          ? this.identityService.generatePseudonym(t.creatorId, t.id)
-          : null,
-      })),
+      threads: threads.map((t:any) => {
+        // Never expose the real author (creator / creatorId) for anonymous threads.
+        const { creator, creatorId, ...rest } = t;
+        return {
+          ...rest,
+          likeCount: t._count.likes,
+          isLiked: userId ? t.likes.length > 0 : false,
+          likes: undefined,
+          isOwner: userId ? creatorId === userId : false,
+          ...(t.isAnonymous
+            ? { creatorPseudonym: this.identityService.generatePseudonym(creatorId, t.id) }
+            : { creator, creatorId, creatorPseudonym: null }),
+        };
+      }),
       pagination: {
         page,
         limit,
@@ -130,16 +135,19 @@ export class ThreadService {
       });
     }
 
+    // Never expose the real author (creator / creatorId) for anonymous threads.
+    const { creator, creatorId, ...rest } = thread;
     return {
-      ...thread,
+      ...rest,
       likeCount: thread._count.likes,
       isLiked: userId ? thread.likes.length > 0 : false,
       likes: undefined,
+      isOwner: userId ? creatorId === userId : false,
       myPseudonym: myParticipant?.pseudonym ?? null,
       myAvatarColor: myParticipant?.avatarColor ?? null,
-      creatorPseudonym: thread.isAnonymous
-        ? this.identityService.generatePseudonym(thread.creatorId, threadId)
-        : null,
+      ...(thread.isAnonymous
+        ? { creatorPseudonym: this.identityService.generatePseudonym(creatorId, threadId) }
+        : { creator, creatorId, creatorPseudonym: null }),
     };
   };
 

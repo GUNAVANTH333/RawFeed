@@ -157,9 +157,10 @@ export interface Thread {
   imageUrl: string | null;
   isAnonymous: boolean;
   createdAt: string;
-  creatorId: string;
+  creatorId?: string;
   creator?: { username: string; profilePhoto?: string | null };
   creatorPseudonym?: string | null;
+  isOwner?: boolean;
   likeCount: number;
   isLiked: boolean;
   _count?: { comments: number; participants: number };

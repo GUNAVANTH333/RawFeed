@@ -549,7 +549,7 @@ export default function ThreadPage({ params }: { params: Promise<{ id: string }>
                       </button>
                       {showThreadMenu && (
                         <div className="absolute right-0 bottom-full mb-1 w-44 rounded-xl shadow-2xl py-1 z-[60]" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
-                          {user && thread.creatorId === user.id ? (
+                          {thread.isOwner ? (
                             <>
                               <button onClick={handleEditThread} className="w-full flex items-center gap-2 px-4 py-2.5 text-sm hover:bg-primary/5 transition-colors text-left" style={{ color: "var(--text-primary)" }}>
                                 <span className="material-symbols-outlined !text-[18px]">edit</span> Edit Thread
