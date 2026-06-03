@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { getThread, getComments, createComment, voteComment, deleteThread, deleteComment, updateThread, type ThreadDetail, type Comment, likeThread } from "@/lib/api";
 import { useAuth } from "@/lib/AuthContext";
 import { useTheme } from "@/lib/ThemeProvider";
+import { ringColors, bgColors, textColors, getColorIdx } from "@/lib/avatar";
 
 function timeAgo(dateStr: string) {
   const diff = Date.now() - new Date(dateStr).getTime();
@@ -15,16 +16,6 @@ function timeAgo(dateStr: string) {
   if (hours < 24) return `${hours}h ago`;
   const days = Math.floor(hours / 24);
   return `${days}d ago`;
-}
-
-const ringColors = ["ring-sky-400", "ring-indigo-400", "ring-emerald-400", "ring-orange-400", "ring-red-400", "ring-violet-400"];
-const bgColors = ["bg-sky-50", "bg-indigo-50", "bg-emerald-50", "bg-orange-50", "bg-red-50", "bg-violet-50"];
-const textColors = ["text-sky-500", "text-indigo-500", "text-emerald-500", "text-orange-500", "text-red-500", "text-violet-500"];
-
-function getColorIdx(name: string) {
-  let hash = 0;
-  for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
-  return Math.abs(hash) % ringColors.length;
 }
 
 export default function ThreadPage({ params }: { params: Promise<{ id: string }> }) {
@@ -482,14 +473,33 @@ export default function ThreadPage({ params }: { params: Promise<{ id: string }>
                           {thread.description}
                         </p>
                       )}
-                      <div className="flex items-center gap-2 mb-3">
-                        <div className="size-6 rounded relative overflow-hidden ring-1" style={{ background: "var(--surface-hover)", "--tw-ring-color": "var(--surface)" } as React.CSSProperties}>
-                          <div className="absolute inset-0 bg-[conic-gradient(from_90deg_at_50%_50%,_#BAE6FD_0%,_#38BDF8_50%,_#BAE6FD_100%)]"></div>
+                      {!thread.isAnonymous && thread.creator?.username ? (
+                        <Link href={`/${thread.creator.username}`} className="flex items-center gap-2 mb-3 w-fit group">
+                          <div className="size-6 rounded relative overflow-hidden ring-1" style={{ background: "var(--surface-hover)", "--tw-ring-color": "var(--surface)" } as React.CSSProperties}>
+                            {thread.creator.profilePhoto ? (
+                              <img src={thread.creator.profilePhoto} alt={thread.creator.username} className="absolute inset-0 w-full h-full object-cover" />
+                            ) : (
+                              <div className="absolute inset-0 flex items-center justify-center bg-primary text-white text-[11px] font-bold uppercase">
+                                {thread.creator.username.charAt(0)}
+                              </div>
+                            )}
+                          </div>
+                          <span className="text-sm font-semibold group-hover:text-primary transition-colors" style={{ color: "var(--text-secondary)" }}>
+                            {thread.creator.username}
+                          </span>
+                        </Link>
+                      ) : (
+                        <div className="flex items-center gap-2 mb-3">
+                          <div className="size-6 rounded relative overflow-hidden ring-1" style={{ background: "var(--surface-hover)", "--tw-ring-color": "var(--surface)" } as React.CSSProperties}>
+                            <div className={`absolute inset-0 flex items-center justify-center ${bgColors[getColorIdx(thread.creatorPseudonym || "Anonymous")]} ${textColors[getColorIdx(thread.creatorPseudonym || "Anonymous")]} text-[11px] font-bold uppercase`}>
+                              {(thread.creatorPseudonym || "A").charAt(0)}
+                            </div>
+                          </div>
+                          <span className="text-sm font-semibold" style={{ color: "var(--text-secondary)" }}>
+                            {thread.creatorPseudonym || "Anonymous"}
+                          </span>
                         </div>
-                        <span className="text-sm font-semibold" style={{ color: "var(--text-secondary)" }}>
-                          {thread.isAnonymous ? "Anonymous" : (thread.creator?.username || "Anonymous")}
-                        </span>
-                      </div>
+                      )}
                       {thread.url && <p className="text-sm line-clamp-2 mb-4" style={{ color: "var(--text-secondary)" }}>{thread.url}</p>}
                     </>
                   )}

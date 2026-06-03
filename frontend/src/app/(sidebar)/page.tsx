@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { getThreads, likeThread, type Thread, type Pagination } from "@/lib/api";
+import { bgColors, textColors, getColorIdx } from "@/lib/avatar";
 import { useAuth } from "@/lib/AuthContext";
 
 const categories = ["For You", "Global News", "Tech & Science", "Finance"];
@@ -195,10 +196,20 @@ export default function HomePage() {
                         <div className="flex items-center justify-between pt-4" style={{ borderTop: "1px solid var(--border-subtle)" }}>
                           <div className="flex items-center gap-3">
                             <div className="size-8 rounded relative overflow-hidden ring-2" style={{ background: "var(--surface-hover)", "--tw-ring-color": "var(--surface)" } as React.CSSProperties}>
-                              <div className="absolute inset-0 bg-[conic-gradient(from_90deg_at_50%_50%,_#BAE6FD_0%,_#38BDF8_50%,_#BAE6FD_100%)]"></div>
+                              {thread.isAnonymous ? (
+                                <div className={`absolute inset-0 flex items-center justify-center ${bgColors[getColorIdx(thread.creatorPseudonym || "Anonymous")]} ${textColors[getColorIdx(thread.creatorPseudonym || "Anonymous")]} text-sm font-bold uppercase`}>
+                                  {(thread.creatorPseudonym || "A").charAt(0)}
+                                </div>
+                              ) : thread.creator?.profilePhoto ? (
+                                <img src={thread.creator.profilePhoto} alt={thread.creator?.username || "User"} className="absolute inset-0 w-full h-full object-cover" />
+                              ) : (
+                                <div className="absolute inset-0 flex items-center justify-center bg-primary text-white text-sm font-bold uppercase">
+                                  {(thread.creator?.username || "?").charAt(0)}
+                                </div>
+                              )}
                             </div>
                             <span className="text-sm font-semibold" style={{ color: "var(--text-secondary)" }}>
-                              {thread.isAnonymous ? "Anonymous" : (thread.creator?.username || "Anonymous")}
+                              {thread.isAnonymous ? (thread.creatorPseudonym || "Anonymous") : (thread.creator?.username || "Anonymous")}
                             </span>
                           </div>
                           <div className="flex items-center gap-4">

@@ -47,7 +47,7 @@ export class ThreadService {
         orderBy: { createdAt: "desc" },
         include: {
           _count: { select: { comments: true, participants: true, likes: true } },
-          creator: { select: { username: true } },
+          creator: { select: { username: true, profilePhoto: true } },
           likes: userId ? { where: { userId }, select: { id: true } } : false,
         },
       }),
@@ -60,6 +60,9 @@ export class ThreadService {
         likeCount: t._count.likes,
         isLiked: userId ? t.likes.length > 0 : false,
         likes: undefined,
+        creatorPseudonym: t.isAnonymous
+          ? this.identityService.generatePseudonym(t.creatorId, t.id)
+          : null,
       })),
       pagination: {
         page,
@@ -111,7 +114,7 @@ export class ThreadService {
         participants: {
           select: { id: true, pseudonym: true, avatarColor: true, joinedAt: true },
         },
-        creator: { select: { username: true } },
+        creator: { select: { username: true, profilePhoto: true } },
         _count: { select: { comments: true, likes: true } },
         likes: userId ? { where: { userId }, select: { id: true } } : false,
       },
@@ -134,6 +137,9 @@ export class ThreadService {
       likes: undefined,
       myPseudonym: myParticipant?.pseudonym ?? null,
       myAvatarColor: myParticipant?.avatarColor ?? null,
+      creatorPseudonym: thread.isAnonymous
+        ? this.identityService.generatePseudonym(thread.creatorId, threadId)
+        : null,
     };
   };
 
