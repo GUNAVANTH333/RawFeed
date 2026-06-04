@@ -31,6 +31,7 @@ export default function ThreadPage({ params }: { params: Promise<{ id: string }>
   const [myPseudonym, setMyPseudonym] = useState<string | null>(null);
   const [identityChoice, setIdentityChoice] = useState<boolean | null>(null);
   const [showThreadMenu, setShowThreadMenu] = useState(false);
+  const [copied, setCopied] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [editTitle, setEditTitle] = useState("");
   const [editUrl, setEditUrl] = useState("");
@@ -492,9 +493,9 @@ export default function ThreadPage({ params }: { params: Promise<{ id: string }>
 
                       {/* Source link */}
                       {thread.url && (
-                        <a href={thread.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-sm font-medium mb-4 hover:underline max-w-full" style={{ color: "var(--text-primary)" }}>
+                        <a href={thread.url} target="_blank" rel="noopener noreferrer" className="group inline-flex items-center gap-1.5 text-sm font-medium mb-4 max-w-full" style={{ color: "var(--text-primary)" }}>
                           <span className="material-symbols-outlined !text-[18px] shrink-0">link</span>
-                          <span className="truncate">{thread.url}</span>
+                          <span className="truncate group-hover:underline">{thread.url}</span>
                           <span className="material-symbols-outlined !text-[16px] shrink-0">open_in_new</span>
                         </a>
                       )}
@@ -538,6 +539,23 @@ export default function ThreadPage({ params }: { params: Promise<{ id: string }>
                         favorite
                       </span>
                       {thread.likeCount > 0 && <span className="text-sm font-medium">{thread.likeCount}</span>}
+                    </button>
+                    <button
+                      onClick={async () => {
+                        try {
+                          await navigator.clipboard.writeText(window.location.href);
+                          setCopied(true);
+                          setTimeout(() => setCopied(false), 1500);
+                        } catch {
+                          alert("Could not copy link.");
+                        }
+                      }}
+                      className="flex items-center gap-1.5 px-2 py-1 rounded-lg transition-colors hover:bg-black/5 dark:hover:bg-white/5"
+                      style={{ color: copied ? "var(--text-primary)" : "var(--text-muted)" }}
+                      aria-label="Copy link"
+                    >
+                      <span className="material-symbols-outlined !text-[20px]">{copied ? "check" : "ios_share"}</span>
+                      <span className="text-sm font-medium">{copied ? "Copied" : "Share"}</span>
                     </button>
                     <div className="relative ml-auto">
                       <button onClick={() => setShowThreadMenu((v) => !v)} className="p-1.5 rounded-lg hover:text-primary transition-colors" style={{ color: "var(--text-muted)" }}>

@@ -22,6 +22,20 @@ export default function HomePage() {
   const [threads, setThreads] = useState<Thread[]>([]);
   const [pagination, setPagination] = useState<Pagination | null>(null);
   const [loading, setLoading] = useState(true);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  const handleShare = useCallback(async (e: React.MouseEvent, threadId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const url = `${window.location.origin}/threads/${threadId}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopiedId(threadId);
+      setTimeout(() => setCopiedId((id) => (id === threadId ? null : id)), 1500);
+    } catch {
+      alert("Could not copy link.");
+    }
+  }, []);
 
   useEffect(() => {
     getThreads(1, 20)
@@ -199,12 +213,13 @@ export default function HomePage() {
                         <span className="text-xs font-medium">{thread._count?.comments || 0}</span>
                       </div>
                       <button
-                        onClick={(e) => e.preventDefault()}
-                        className="ml-auto flex items-center transition-opacity hover:opacity-70"
-                        style={{ color: "var(--text-muted)" }}
-                        aria-label="Share"
+                        onClick={(e) => handleShare(e, thread.id)}
+                        className="ml-auto flex items-center gap-1.5 transition-colors hover:text-[color:var(--text-primary)]"
+                        style={{ color: copiedId === thread.id ? "var(--text-primary)" : "var(--text-muted)" }}
+                        aria-label="Copy link"
                       >
-                        <span className="material-symbols-outlined text-[20px]">ios_share</span>
+                        <span className="material-symbols-outlined text-[20px]">{copiedId === thread.id ? "check" : "ios_share"}</span>
+                        {copiedId === thread.id && <span className="text-xs font-medium">Copied</span>}
                       </button>
                     </div>
                   </article>
