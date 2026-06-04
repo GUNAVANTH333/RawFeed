@@ -3,52 +3,57 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme inline {
-  --color-primary: #0EA5E9;
-  --color-primary-dark: #0284C7;
-  --color-primary-light: #E0F2FE;
-  --color-verified-blue: #0EA5E9;
+  /* Refined Minimalism — soothing neutral greys, charcoal primary. */
+  --color-primary: #1C1C1E;
+  --color-primary-dark: #000000;
+  --color-primary-light: #F4F4F5;
+  --color-verified-blue: #1C1C1E;
   --color-accent-green: #10B981;
   --color-accent-cyan: #06B6D4;
 
-  --color-bg-light: #F0F9FF;
-  --color-bg-dark: #0F172A;
+  --color-bg-light: #F7F7F8;
+  --color-bg-dark: #121213;
   --color-surface-light: #FFFFFF;
-  --color-surface-dark: #1E293B;
+  --color-surface-dark: #1C1C1E;
 
   --font-display: "Inter", sans-serif;
 }
 
 :root {
-  --background: #F0F9FF;
-  --foreground: #0F172A;
-  --surface: #FFFFFF;
-  --surface-hover: #F8FAFC;
-  --border: #BAE6FD;
-  --border-subtle: #E2E8F0;
-  --text-primary: #0F172A;
-  --text-secondary: #475569;
-  --text-muted: #64748B;
+  --background: #F7F7F8;        /* soft neutral grey base */
+  --foreground: #1C1C1E;
+  --surface: #FFFFFF;           /* cards / containers */
+  --surface-hover: #F0F0F2;     /* subtle tonal layer */
+  --border: #E3E3E6;            /* neutral hairline dividers */
+  --border-subtle: #ECECEE;     /* even softer */
+  --text-primary: #1C1C1E;      /* near-black neutral */
+  --text-secondary: #55555A;    /* mid grey */
+  --text-muted: #8A8A8F;        /* soft grey */
 }
 
 .dark {
-  --background: #0F172A;
-  --foreground: #F1F5F9;
-  --surface: #1E293B;
-  --surface-hover: #334155;
-  --border: #334155;
-  --border-subtle: #1E293B;
-  --text-primary: #F1F5F9;
-  --text-secondary: #94A3B8;
-  --text-muted: #64748B;
+  --background: #131314;        /* soft near-black grey (not pure black) */
+  --foreground: #F5F5F6;
+  --surface: #1D1D1F;           /* clear, lifted grey surface */
+  --surface-hover: #2A2A2D;
+  --border: #3C3C40;            /* crisp neutral hairline */
+  --border-subtle: #2A2A2D;     /* visible divider, slightly softer */
+  --text-primary: #F6F6F7;      /* crisp near-white */
+  --text-secondary: #C4C4C8;    /* brighter secondary text */
+  --text-muted: #909095;        /* soft muted grey */
+  /* Keep primary visible against the dark base while existing buttons still
+     pair it with white text (a punchier CTA token comes in a later pass). */
+  --color-primary: #6E6E73;
+  --color-primary-dark: #87878C;
 }
 
 * {
   scrollbar-width: thin;
-  scrollbar-color: #BAE6FD transparent;
+  scrollbar-color: #D2D2D6 transparent;
 }
 
 .dark * {
-  scrollbar-color: #334155 transparent;
+  scrollbar-color: #3A3A3E transparent;
 }
 
 ::-webkit-scrollbar {
@@ -58,14 +63,14 @@
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #BAE6FD;
+  background: #D2D2D6;
   border-radius: 4px;
 }
 .dark ::-webkit-scrollbar-thumb {
-  background: #334155;
+  background: #3A3A3E;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #7DD3FC;
+  background: #B4B4B9;
 }
 
 body {
@@ -94,10 +99,13 @@ body {
 
 .thread-line-curved {
   position: absolute;
-  top: -24px;
-  left: -26px;
+  /* Connects a reply up to its parent: vertical aligns with the parent
+     avatar's center (40px avatar + 12px gap = 52px indent; 20 - 52 = -32px),
+     and the elbow lands on the reply avatar's vertical center (size-8 → 16px). */
+  top: -22px;
+  left: -32px;
   width: 32px;
-  height: 48px;
+  height: 38px;
   border-bottom-left-radius: 12px;
   border-left: 2px solid var(--border);
   border-bottom: 2px solid var(--border);

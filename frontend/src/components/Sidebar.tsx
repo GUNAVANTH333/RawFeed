@@ -45,16 +45,14 @@ export default function Sidebar() {
   return (
     <>
       <aside
-        className="hidden md:flex flex-col w-64 flex-shrink-0 h-full"
-        style={{ background: "var(--surface)", borderRight: "1px solid var(--border-subtle)" }}
+        className="hidden md:flex flex-col w-56 flex-shrink-0 h-full"
+        style={{ background: "var(--surface)", borderRight: "1px solid var(--border)" }}
       >
-        <div className="flex items-center gap-3 px-6 py-8">
-          <div className="flex flex-col">
-            <h1 className="text-lg font-bold leading-none tracking-tight" style={{ color: "var(--text-primary)" }}>
-              RawFeed
-            </h1>
-            <p className="text-primary text-xs font-medium mt-1">Verified Sources</p>
-          </div>
+        <div className="flex items-center gap-2.5 px-5 py-6">
+          <img src="/rawfeed-logo.png" alt="RawFeed" className="size-9 object-contain shrink-0" />
+          <h1 className="text-lg font-bold leading-none tracking-tight" style={{ color: "var(--text-primary)" }}>
+            RawFeed
+          </h1>
         </div>
 
         <nav className="flex-1 px-4 space-y-2 overflow-y-auto">
@@ -118,9 +116,8 @@ export default function Sidebar() {
               {user.profilePhoto ? (
                 <img src={user.profilePhoto} alt={user.username} className="size-8 rounded-full object-cover" />
               ) : (
-                <div className="size-8 rounded-full bg-sky-200 flex items-center justify-center overflow-hidden relative">
-                  <div className="absolute inset-0 opacity-50 bg-[conic-gradient(at_top,_var(--tw-gradient-stops))] from-sky-900 via-sky-500 to-sky-900"></div>
-                  <span className="relative text-xs font-bold" style={{ color: "var(--text-primary)" }}>{initials}</span>
+                <div className="size-8 rounded-full flex items-center justify-center" style={{ background: "var(--color-primary)" }}>
+                  <span className="text-xs font-bold text-white">{initials}</span>
                 </div>
               )}
               <div className="flex flex-col flex-1 min-w-0">
@@ -204,9 +201,8 @@ export default function Sidebar() {
                 className={`size-7 rounded-full object-cover ring-2 ${pathname === `/${user.username}` ? "ring-primary" : "ring-transparent"}`}
               />
             ) : (
-              <div className="size-7 rounded-full bg-sky-200 flex items-center justify-center overflow-hidden relative">
-                <div className="absolute inset-0 opacity-50 bg-[conic-gradient(at_top,_var(--tw-gradient-stops))] from-sky-900 via-sky-500 to-sky-900"></div>
-                <span className="relative text-[10px] font-bold" style={{ color: "var(--text-primary)" }}>{initials}</span>
+              <div className="size-7 rounded-full flex items-center justify-center" style={{ background: "var(--color-primary)" }}>
+                <span className="text-[10px] font-bold text-white">{initials}</span>
               </div>
             )}
             <span className="text-[10px] font-medium leading-none">Profile</span>

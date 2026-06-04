@@ -33,7 +33,7 @@ export default function SettingsPage() {
 
   if (loading) {
     return (
-      <main className="flex-1 flex items-center justify-center" style={{ background: "var(--background)" }}>
+      <main className="flex-1 flex items-center justify-center" style={{ background: "var(--surface)" }}>
         <div className="animate-pulse" style={{ color: "var(--text-muted)" }}>Loading...</div>
       </main>
     );
@@ -41,7 +41,7 @@ export default function SettingsPage() {
 
   if (!user) {
     return (
-      <main className="flex-1 flex flex-col items-center justify-center p-8" style={{ background: "var(--background)" }}>
+      <main className="flex-1 flex flex-col items-center justify-center p-8" style={{ background: "var(--surface)" }}>
         <span className="material-symbols-outlined text-6xl mb-4" style={{ color: "var(--text-muted)" }}>settings</span>
         <h2 className="text-2xl font-bold mb-2" style={{ color: "var(--text-primary)" }}>Sign in to access settings</h2>
         <p className="mb-6" style={{ color: "var(--text-secondary)" }}>Control your preferences</p>
@@ -59,7 +59,7 @@ export default function SettingsPage() {
   }
 
   return (
-    <main className="flex-1 overflow-y-auto" style={{ background: "var(--background)" }}>
+    <main className="flex-1 overflow-y-auto" style={{ background: "var(--surface)" }}>
       <div className="p-8 lg:p-12 max-w-4xl">
         <header className="mb-10">
           <h2 className="text-4xl font-black tracking-tight mb-2" style={{ color: "var(--text-primary)" }}>Settings</h2>
@@ -72,7 +72,7 @@ export default function SettingsPage() {
             <span className="material-symbols-outlined text-primary">account_circle</span>
             <h3 className="text-xl font-bold" style={{ color: "var(--text-primary)" }}>Account</h3>
           </div>
-          <div className="rounded-xl overflow-hidden shadow-sm" style={{ background: "var(--surface)", border: "1px solid var(--border-subtle)" }}>
+          <div className="rounded-xl overflow-hidden" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
             {/* Email */}
             <div className="p-6 flex items-center justify-between" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
               <div>
@@ -88,7 +88,7 @@ export default function SettingsPage() {
                   <div className="flex gap-2">
                     <input
                       type="text"
-                      className="px-3 py-2 rounded-lg bg-sky-50 dark:bg-slate-800 border border-sky-100 dark:border-slate-700 text-[var(--text-primary)] text-sm focus:ring-2 focus:ring-primary/50 outline-none w-full max-w-sm"
+                      className="px-3 py-2 rounded-lg text-sm outline-none w-full max-w-sm bg-[var(--surface-hover)] border border-[var(--border)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:border-[var(--text-primary)]"
                       placeholder={user.username}
                       value={newUsername}
                       onChange={(e) => setNewUsername(e.target.value)}
@@ -102,8 +102,8 @@ export default function SettingsPage() {
                     </button>
                     <button
                       onClick={() => { setEditUsername(false); setNewUsername(""); setUsernameError(""); }}
-                      className="px-4 py-2 bg-gray-200 dark:bg-slate-700 hover:bg-gray-300 dark:hover:bg-slate-600 rounded-lg text-sm font-medium transition-colors"
-                      style={{ color: "var(--text-primary)" }}
+                      className="px-4 py-2 rounded-lg text-sm font-medium transition-opacity hover:opacity-80"
+                      style={{ color: "var(--text-primary)", background: "var(--surface-hover)", border: "1px solid var(--border)" }}
                     >
                       Cancel
                     </button>
@@ -148,7 +148,7 @@ export default function SettingsPage() {
             <span className="material-symbols-outlined" style={{ color: "var(--text-muted)" }}>phone_iphone</span>
             <h3 className="text-xl font-bold" style={{ color: "var(--text-primary)" }}>Application</h3>
           </div>
-          <div className="rounded-xl overflow-hidden shadow-sm" style={{ background: "var(--surface)", border: "1px solid var(--border-subtle)" }}>
+          <div className="rounded-xl overflow-hidden" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
             {/* Theme Selection */}
             <div className="p-6" style={{ borderBottom: "1px solid var(--border-subtle)" }}>
               <p className="font-semibold mb-4" style={{ color: "var(--text-primary)" }}>Theme Selection</p>

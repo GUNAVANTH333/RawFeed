@@ -18,7 +18,7 @@ export default function NewThreadPage() {
 
   if (loading) {
     return (
-      <main className="flex-1 flex items-center justify-center" style={{ background: "var(--background)" }}>
+      <main className="flex-1 flex items-center justify-center" style={{ background: "var(--surface)" }}>
         <div className="animate-pulse" style={{ color: "var(--text-muted)" }}>Loading...</div>
       </main>
     );
@@ -26,7 +26,7 @@ export default function NewThreadPage() {
 
   if (!user) {
     return (
-      <main className="flex-1 flex flex-col items-center justify-center p-8" style={{ background: "var(--background)" }}>
+      <main className="flex-1 flex flex-col items-center justify-center p-8" style={{ background: "var(--surface)" }}>
         <span className="material-symbols-outlined text-6xl mb-4" style={{ color: "var(--text-muted)" }}>lock</span>
         <h2 className="text-2xl font-bold mb-2" style={{ color: "var(--text-primary)" }}>Sign in to create a thread</h2>
         <p className="mb-6" style={{ color: "var(--text-secondary)" }}>You need to be logged in to start a discussion</p>
@@ -57,14 +57,14 @@ export default function NewThreadPage() {
   }
 
   return (
-    <main className="flex-1 flex justify-center py-12 px-6 overflow-y-auto" style={{ background: "var(--background)" }}>
+    <main className="flex-1 flex justify-center py-12 px-6 overflow-y-auto" style={{ background: "var(--surface)" }}>
       <div className="max-w-2xl w-full">
         <header className="mb-8">
           <h2 className="text-3xl font-black tracking-tight" style={{ color: "var(--text-primary)" }}>Create a New Thread</h2>
           <p className="mt-2" style={{ color: "var(--text-secondary)" }}>Start a discussion on any topic you want to share with the community.</p>
         </header>
 
-        <div className="rounded-xl overflow-hidden shadow-xl" style={{ background: "var(--surface)", border: "1px solid var(--border-subtle)" }}>
+        <div className="rounded-xl overflow-hidden" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
           <form className="p-8 space-y-6" onSubmit={handleSubmit}>
             {error && (
               <div className="px-4 py-3 rounded-lg text-sm font-medium bg-red-50 text-red-600 border border-red-100 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800">
@@ -150,7 +150,8 @@ export default function NewThreadPage() {
             {/* Action Bar */}
             <div className="pt-6 flex items-center justify-end" style={{ borderTop: "1px solid var(--border-subtle)" }}>
               <button
-                className="bg-primary hover:bg-primary-dark text-white font-bold py-3 px-8 rounded-lg shadow-lg shadow-primary/30 transition-all flex items-center gap-2 active:scale-95 disabled:opacity-50"
+                className="text-white font-bold py-3 px-8 rounded-lg transition-opacity hover:opacity-90 flex items-center gap-2 active:scale-95 disabled:opacity-50"
+                style={{ background: "var(--color-primary)" }}
                 type="submit"
                 disabled={submitting || !title.trim()}
               >

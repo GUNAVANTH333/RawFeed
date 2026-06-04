@@ -5,8 +5,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { getThread, getComments, createComment, voteComment, deleteThread, deleteComment, updateThread, type ThreadDetail, type Comment, likeThread } from "@/lib/api";
 import { useAuth } from "@/lib/AuthContext";
-import { useTheme } from "@/lib/ThemeProvider";
-import { ringColors, bgColors, textColors, getColorIdx } from "@/lib/avatar";
+import { bgColors, textColors, getColorIdx } from "@/lib/avatar";
+import { IncognitoIcon } from "@/components/IncognitoIcon";
 
 function timeAgo(dateStr: string) {
   const diff = Date.now() - new Date(dateStr).getTime();
@@ -21,7 +21,6 @@ function timeAgo(dateStr: string) {
 export default function ThreadPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const { user } = useAuth();
-  const { theme, toggleTheme } = useTheme();
   const router = useRouter();
   const [thread, setThread] = useState<ThreadDetail | null>(null);
   const [comments, setComments] = useState<Comment[]>([]);
@@ -221,46 +220,57 @@ export default function ThreadPage({ params }: { params: Promise<{ id: string }>
 
     return (
       <div key={comment.id} className={isTopLevel ? "relative group/comment" : "relative"}>
-        {!isTopLevel && <div className="thread-line-curved"></div>}
-        <div className="flex gap-4">
-          <div className="flex flex-col items-center shrink-0 z-10">
-            {comment.participant.profilePhoto ? (
+        {/* Vertical thread line descending from this comment's avatar through its replies */}
+        {replies.length > 0 && (
+          <div
+            className="absolute"
+            style={{ left: isTopLevel ? "19px" : "15px", top: isTopLevel ? "30px" : "30px", bottom: "0", width: "2px", background: "var(--border)", zIndex: 0 }}
+          />
+        )}
+        {/* Horizontal elbow connecting the parent's line to this reply's avatar */}
+        {!isTopLevel && (
+          <div
+            className="absolute"
+            style={{ left: "-21px", top: "15px", width: "21px", height: "2px", background: "var(--border)", zIndex: 0 }}
+          />
+        )}
+        <div className="flex gap-3">
+          <div className="shrink-0 z-10">
+            {comment.participant.profilePhoto && !comment.participant.isAnonymous ? (
               <img
                 src={comment.participant.profilePhoto}
                 alt={`${comment.participant.pseudonym}'s profile`}
-                className={`${avatarSize} rounded-full object-cover ring-2 ${ringColors[ci]} p-0.5 shadow-sm`}
-                style={{ background: "var(--surface)" }}
+                className={`${avatarSize} rounded-full object-cover`}
               />
             ) : (
-              <div className={`${avatarSize} rounded-full ${ringColors[ci]} ring-2 p-0.5 shadow-sm`} style={{ background: "var(--surface)" }}>
-                <div className={`w-full h-full rounded-full ${bgColors[ci]} flex items-center justify-center ${textColors[ci]} font-bold ${fontSize} select-none`}>
-                  {initial}
-                </div>
+              <div className={`${avatarSize} ${comment.participant.isAnonymous ? "rounded-md" : "rounded-full"} ${bgColors[ci]} flex items-center justify-center ${textColors[ci]} font-bold ${fontSize} select-none`}>
+                {initial}
               </div>
             )}
           </div>
-          <div className="flex-1 pb-2">
-            <div className="flex items-center gap-2 mb-1">
+          <div className="flex-1 min-w-0 pb-1">
+            <div className="flex items-center gap-1.5 mb-1 flex-wrap">
               {!comment.participant.isAnonymous ? (
                 <Link
                   href={`/${comment.participant.pseudonym}`}
-                  className="text-sm font-bold hover:text-primary cursor-pointer transition-colors"
+                  className="text-sm font-semibold hover:underline cursor-pointer"
                   style={{ color: "var(--text-primary)" }}
                 >
                   {comment.participant.pseudonym}
                 </Link>
               ) : (
-                <span className="text-sm font-bold" style={{ color: "var(--text-primary)" }}>
+                <span className="inline-flex items-center gap-1 text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
                   {comment.participant.pseudonym}
+                  <IncognitoIcon title="Anonymous" className="size-[14px] shrink-0" style={{ color: "var(--text-muted)" }} />
                 </span>
               )}
               {comment.isCreator && !comment.isMe && (
-                <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-blue-500/10 text-blue-500 border border-blue-500/20 font-bold uppercase tracking-wider">Author</span>
+                <span className="text-[10px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wide" style={{ background: "var(--surface-hover)", color: "var(--text-secondary)" }}>Author</span>
               )}
               {comment.isMe && (
-                <span className="text-xs px-1.5 py-0.5 rounded bg-primary/10 text-primary border border-primary/20 font-semibold">You</span>
+                <span className="text-[10px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wide" style={{ background: "var(--surface-hover)", color: "var(--text-secondary)" }}>You</span>
               )}
-              <span className="text-xs" style={{ color: "var(--text-muted)" }}>• {timeAgo(comment.createdAt)}</span>
+              <span className="text-xs" style={{ color: "var(--text-muted)" }}>· {timeAgo(comment.createdAt)}</span>
             </div>
 
             {comment.isHidden ? (
@@ -271,7 +281,7 @@ export default function ThreadPage({ params }: { params: Promise<{ id: string }>
                 <p className="text-sm font-medium italic" style={{ color: "var(--text-secondary)" }}>[Hidden by Community Standards]</p>
               </div>
             ) : (
-              <div className="text-sm leading-relaxed mb-3" style={{ color: "var(--text-secondary)" }}>{comment.content}</div>
+              <div className="text-[15px] leading-relaxed mb-2.5" style={{ color: "var(--text-primary)", opacity: 0.92 }}>{comment.content}</div>
             )}
 
             <div className="flex items-center gap-6">
@@ -354,9 +364,18 @@ export default function ThreadPage({ params }: { params: Promise<{ id: string }>
               </div>
             )}
 
-            {/* Nested Replies */}
+            {/* Nested Replies — vertical guide line aligned under the parent avatar's
+                center. marginLeft pulls the group left so the border sits on the
+                avatar centerline (top-level avatar 40px → center 20, indent 52 → -32;
+                nested avatar 32px → center 16, indent 44 → -28). */}
             {replies.length > 0 && (
-              <div className="mt-6 flex flex-col gap-6 relative">
+              <div
+                className="mt-3 flex flex-col gap-4"
+                style={{
+                  marginLeft: isTopLevel ? "-32px" : "-28px",
+                  paddingLeft: "21px",
+                }}
+              >
                 {replies.map((reply) => renderComment(reply, depth + 1))}
               </div>
             )}
@@ -368,81 +387,41 @@ export default function ThreadPage({ params }: { params: Promise<{ id: string }>
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen" style={{ background: "var(--background)" }}>
+      <main className="flex-1 flex items-center justify-center" style={{ background: "var(--surface)" }}>
         <div className="animate-pulse" style={{ color: "var(--text-muted)" }}>Loading thread...</div>
-      </div>
+      </main>
     );
   }
 
   if (!thread) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen" style={{ background: "var(--background)" }}>
+      <main className="flex-1 flex flex-col items-center justify-center" style={{ background: "var(--surface)" }}>
         <span className="material-symbols-outlined text-6xl" style={{ color: "var(--text-muted)" }}>error</span>
         <p className="text-xl font-bold mt-4" style={{ color: "var(--text-primary)" }}>Thread not found</p>
         <Link href="/" className="text-primary hover:underline mt-2">Back to Feed</Link>
-      </div>
+      </main>
     );
   }
 
   return (
-    <div className="flex flex-col min-h-screen" style={{ background: "var(--background)" }}>
-      {/* Header */}
-      <header className="sticky top-0 z-50 flex items-center justify-between whitespace-nowrap px-4 md:px-10 py-3 backdrop-blur-md" style={{ background: "color-mix(in srgb, var(--surface) 90%, transparent)", borderBottom: "1px solid var(--border)" }}>
-        <div className="flex items-center gap-8">
-          <div className="flex items-center gap-4">
-            <div className="size-8 text-primary">
-              <span className="material-symbols-outlined !text-[32px]">hub</span>
-            </div>
-            <h2 className="text-lg font-bold leading-tight tracking-tight" style={{ color: "var(--text-primary)" }}>RawFeed</h2>
-          </div>
-          <nav className="hidden md:flex items-center gap-9">
-            <Link className="text-sm font-medium transition-colors hover:text-primary" style={{ color: "var(--text-secondary)" }} href="/">Home</Link>
-            <Link className="text-primary text-sm font-bold" href="#">Trending</Link>
-          </nav>
-        </div>
-        <div className="flex flex-1 justify-end gap-4 md:gap-8 items-center">
-          <button onClick={toggleTheme} className="p-2 rounded-lg hover:text-primary transition-colors" style={{ color: "var(--text-secondary)" }}>
-            <span className="material-symbols-outlined">{theme === "dark" ? "light_mode" : "dark_mode"}</span>
-          </button>
-          <label className="hidden md:flex flex-col min-w-40 !h-10 max-w-64">
-            <div className="flex w-full flex-1 items-stretch rounded-lg h-full transition-all" style={{ background: "var(--surface-hover)", border: "1px solid var(--border)" }}>
-              <div className="flex items-center justify-center pl-4 text-primary/60">
-                <span className="material-symbols-outlined">search</span>
-              </div>
-              <input className="flex w-full min-w-0 flex-1 bg-transparent focus:outline-none h-full px-4 pl-2 text-sm border-none" style={{ color: "var(--text-primary)" }} placeholder="Search topics..." />
-            </div>
-          </label>
-          {user && (
-            <div className="size-10 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold text-sm ring-2 ring-transparent hover:ring-primary transition-all cursor-pointer">
-              {user.email[0].toUpperCase()}
-            </div>
-          )}
-        </div>
+    <main className="flex-1 overflow-y-auto flex flex-col" style={{ background: "var(--surface)" }}>
+      {/* Slim sticky header */}
+      <header
+        className="sticky top-0 z-20 flex items-center gap-3 px-4 py-3"
+        style={{ background: "color-mix(in srgb, var(--surface) 85%, transparent)", borderBottom: "1px solid var(--border)", backdropFilter: "blur(8px)" }}
+      >
+        <Link href="/" className="flex items-center justify-center size-9 rounded-full transition-colors hover:bg-[var(--surface-hover)]" style={{ color: "var(--text-primary)" }} aria-label="Back to feed">
+          <span className="material-symbols-outlined text-[22px]">arrow_back</span>
+        </Link>
+        <h2 className="text-base font-bold tracking-tight" style={{ color: "var(--text-primary)" }}>Thread</h2>
       </header>
 
-      {/* Main Content */}
-      <main className="flex-grow flex flex-col items-center w-full px-4 md:px-0 pb-24">
-        <div className="w-full max-w-[800px] py-8 flex flex-col gap-6">
-          {/* Breadcrumb */}
-          <div className="flex items-center gap-2 text-sm mb-2 px-2" style={{ color: "var(--text-secondary)" }}>
-            <Link href="/" className="flex items-center gap-1 hover:text-primary transition-colors">
-              <span className="material-symbols-outlined !text-[18px]">arrow_back</span>
-              <span>Back to Feed</span>
-            </Link>
-            <span className="opacity-50">/</span>
-            <span className="font-medium truncate max-w-[200px]" style={{ color: "var(--text-primary)" }}>{thread.title}</span>
-          </div>
+      <div className="flex flex-col gap-5 px-4 sm:px-5 py-5">
 
           {/* Thread Article Card */}
-          <article className="rounded-xl shadow-sm overflow-hidden" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
-            <div className="flex flex-col md:flex-row">
-              {thread.imageUrl && (
-                <div className="w-full md:w-2/5 h-48 md:h-auto relative group overflow-hidden">
-                  <div className="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-105" style={{ backgroundImage: `url('${thread.imageUrl}')` }}></div>
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent md:hidden"></div>
-                </div>
-              )}
-              <div className="flex-1 p-5 md:p-6 flex flex-col justify-between" style={{ background: "var(--surface)" }}>
+          <article style={{ background: "var(--surface)" }}>
+            <div>
+              <div className="px-1 flex flex-col justify-between">
                 <div>
                   {editMode ? (
                     <div className="flex flex-col gap-3">
@@ -467,51 +446,69 @@ export default function ThreadPage({ params }: { params: Promise<{ id: string }>
                     </div>
                   ) : (
                     <>
-                      <h1 className="text-xl md:text-2xl font-bold leading-tight mb-3" style={{ color: "var(--text-primary)" }}>{thread.title}</h1>
-                      {thread.description && (
-                        <p className="text-sm md:text-base leading-relaxed whitespace-pre-wrap mb-4" style={{ color: "var(--text-primary)", opacity: 0.9 }}>
-                          {thread.description}
-                        </p>
-                      )}
+                      {/* Author */}
                       {!thread.isAnonymous && thread.creator?.username ? (
-                        <Link href={`/${thread.creator.username}`} className="flex items-center gap-2 mb-3 w-fit group">
-                          <div className="size-6 rounded relative overflow-hidden ring-1" style={{ background: "var(--surface-hover)", "--tw-ring-color": "var(--surface)" } as React.CSSProperties}>
+                        <Link href={`/${thread.creator.username}`} className="flex items-center gap-2.5 mb-4 w-fit group">
+                          <div className="size-9 rounded-full relative overflow-hidden shrink-0" style={{ background: "var(--surface-hover)" }}>
                             {thread.creator.profilePhoto ? (
                               <img src={thread.creator.profilePhoto} alt={thread.creator.username} className="absolute inset-0 w-full h-full object-cover" />
                             ) : (
-                              <div className="absolute inset-0 flex items-center justify-center bg-primary text-white text-[11px] font-bold uppercase">
+                              <div className="absolute inset-0 flex items-center justify-center text-white text-sm font-bold uppercase" style={{ background: "var(--color-primary)" }}>
                                 {thread.creator.username.charAt(0)}
                               </div>
                             )}
                           </div>
-                          <span className="text-sm font-semibold group-hover:text-primary transition-colors" style={{ color: "var(--text-secondary)" }}>
-                            {thread.creator.username}
-                          </span>
+                          <div className="leading-tight">
+                            <span className="block text-sm font-semibold group-hover:underline" style={{ color: "var(--text-primary)" }}>{thread.creator.username}</span>
+                            <span className="text-xs" style={{ color: "var(--text-muted)" }}>{timeAgo(thread.createdAt)}</span>
+                          </div>
                         </Link>
                       ) : (
-                        <div className="flex items-center gap-2 mb-3">
-                          <div className="size-6 rounded relative overflow-hidden ring-1" style={{ background: "var(--surface-hover)", "--tw-ring-color": "var(--surface)" } as React.CSSProperties}>
-                            <div className={`absolute inset-0 flex items-center justify-center ${bgColors[getColorIdx(thread.creatorPseudonym || "Anonymous")]} ${textColors[getColorIdx(thread.creatorPseudonym || "Anonymous")]} text-[11px] font-bold uppercase`}>
+                        <div className="flex items-center gap-2.5 mb-4">
+                          <div className="size-9 rounded-md relative overflow-hidden shrink-0" style={{ background: "var(--surface-hover)" }}>
+                            <div className={`absolute inset-0 flex items-center justify-center ${bgColors[getColorIdx(thread.creatorPseudonym || "Anonymous")]} ${textColors[getColorIdx(thread.creatorPseudonym || "Anonymous")]} text-sm font-bold uppercase`}>
                               {(thread.creatorPseudonym || "A").charAt(0)}
                             </div>
                           </div>
-                          <span className="text-sm font-semibold" style={{ color: "var(--text-secondary)" }}>
-                            {thread.creatorPseudonym || "Anonymous"}
-                          </span>
+                          <div className="leading-tight">
+                            <span className="flex items-center gap-1 text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
+                              {thread.creatorPseudonym || "Anonymous"}
+                              <IncognitoIcon title="Anonymous" className="size-[14px] shrink-0" style={{ color: "var(--text-muted)" }} />
+                            </span>
+                            <span className="text-xs" style={{ color: "var(--text-muted)" }}>{timeAgo(thread.createdAt)}</span>
+                          </div>
                         </div>
                       )}
-                      {thread.url && <p className="text-sm line-clamp-2 mb-4" style={{ color: "var(--text-secondary)" }}>{thread.url}</p>}
+
+                      {/* Title */}
+                      <h1 className="text-2xl md:text-[28px] font-bold leading-tight tracking-tight mb-3" style={{ color: "var(--text-primary)" }}>{thread.title}</h1>
+
+                      {/* Description */}
+                      {thread.description && (
+                        <p className="text-[15px] md:text-base leading-relaxed whitespace-pre-wrap mb-4" style={{ color: "var(--text-secondary)" }}>
+                          {thread.description}
+                        </p>
+                      )}
+
+                      {/* Source link */}
+                      {thread.url && (
+                        <a href={thread.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-sm font-medium mb-4 hover:underline max-w-full" style={{ color: "var(--text-primary)" }}>
+                          <span className="material-symbols-outlined !text-[18px] shrink-0">link</span>
+                          <span className="truncate">{thread.url}</span>
+                          <span className="material-symbols-outlined !text-[16px] shrink-0">open_in_new</span>
+                        </a>
+                      )}
+
+                      {/* Image */}
+                      {thread.imageUrl && (
+                        <div className="rounded-lg overflow-hidden aspect-[16/9] mb-4" style={{ border: "1px solid var(--border)" }}>
+                          <img src={thread.imageUrl} alt="" className="w-full h-full object-cover" />
+                        </div>
+                      )}
                     </>
                   )}
                 </div>
-                <div className="flex items-center justify-between pt-2 mt-2" style={{ borderTop: "1px solid var(--border-subtle)" }}>
-                  <span className="text-xs" style={{ color: "var(--text-muted)" }}>{timeAgo(thread.createdAt)}</span>
-                  <div className="flex items-center gap-2">
-                    {thread.url && (
-                      <a href={thread.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-sm font-medium text-primary hover:text-primary-dark transition-colors">
-                        Read Full Analysis <span className="material-symbols-outlined !text-[16px]">open_in_new</span>
-                      </a>
-                    )}
+                <div className="flex items-center gap-3 mt-4">
                     <button
                       onClick={async (e) => {
                         e.preventDefault();
@@ -534,8 +531,7 @@ export default function ThreadPage({ params }: { params: Promise<{ id: string }>
                           setThread(prev => prev ? { ...prev, isLiked: !prev.isLiked, likeCount: !prev.isLiked ? prev.likeCount - 1 : prev.likeCount + 1} : null);
                         }
                       }}
-                      className="flex items-center gap-1.5 transition-colors group px-2 py-1 rounded-lg hover:bg-black/5 dark:hover:bg-white/5"
-                      style={{ color: thread.isLiked ? "var(--color-primary)" : "var(--text-muted)" }}
+                      className={`flex items-center gap-1.5 group px-2 py-1 rounded-lg transition-colors hover:bg-black/5 dark:hover:bg-white/5 hover:text-[#F43F5E] ${thread.isLiked ? "text-[#F43F5E]" : "text-[color:var(--text-muted)]"}`}
                       aria-label="Like Thread"
                     >
                       <span className={`material-symbols-outlined !text-[20px] transition-transform group-hover:scale-110 ${thread.isLiked ? "fill-1" : ""}`}>
@@ -543,7 +539,7 @@ export default function ThreadPage({ params }: { params: Promise<{ id: string }>
                       </span>
                       {thread.likeCount > 0 && <span className="text-sm font-medium">{thread.likeCount}</span>}
                     </button>
-                    <div className="relative">
+                    <div className="relative ml-auto">
                       <button onClick={() => setShowThreadMenu((v) => !v)} className="p-1.5 rounded-lg hover:text-primary transition-colors" style={{ color: "var(--text-muted)" }}>
                         <span className="material-symbols-outlined !text-[20px]">more_horiz</span>
                       </button>
@@ -566,7 +562,6 @@ export default function ThreadPage({ params }: { params: Promise<{ id: string }>
                         </div>
                       )}
                     </div>
-                  </div>
                 </div>
               </div>
             </div>
@@ -575,7 +570,7 @@ export default function ThreadPage({ params }: { params: Promise<{ id: string }>
           {/* Discussion Header */}
           <div className="flex items-center justify-between px-2 pt-4 pb-4" style={{ borderBottom: "1px solid var(--border)" }}>
             <h3 className="text-lg font-semibold flex items-center gap-2" style={{ color: "var(--text-primary)" }}>
-              Discussion <span className="bg-primary/10 text-primary text-xs px-2 py-0.5 rounded-full font-bold">{comments.length}</span>
+              Discussion <span className="text-xs px-2 py-0.5 rounded-full font-bold" style={{ background: "var(--surface-hover)", color: "var(--text-secondary)" }}>{comments.length}</span>
             </h3>
             <div className="flex items-center gap-2">
               <span className="text-xs" style={{ color: "var(--text-secondary)" }}>Sort by:</span>
@@ -586,29 +581,25 @@ export default function ThreadPage({ params }: { params: Promise<{ id: string }>
           </div>
 
           {/* Comments */}
-          <div className="flex flex-col gap-6 px-2">
-            {topLevelComments.map((comment) => renderComment(comment))}
-
-            {comments.length === 0 && (
+          <div className="px-1">
+            {comments.length === 0 ? (
               <div className="text-center py-12">
                 <span className="material-symbols-outlined text-5xl" style={{ color: "var(--text-muted)" }}>chat</span>
                 <p className="mt-3" style={{ color: "var(--text-secondary)" }}>No comments yet. Be the first to share your perspective!</p>
               </div>
+            ) : (
+              <div className="flex flex-col divide-y divide-[color:var(--border-subtle)]">
+                {topLevelComments.map((comment) => (
+                  <div key={comment.id} className="py-5 first:pt-1">{renderComment(comment)}</div>
+                ))}
+              </div>
             )}
-
-            <div className="flex justify-center py-6">
-              <div className="w-2 h-2 rounded-full bg-primary/30 mx-1"></div>
-              <div className="w-2 h-2 rounded-full bg-primary/30 mx-1"></div>
-              <div className="w-2 h-2 rounded-full bg-primary/30 mx-1"></div>
-            </div>
           </div>
         </div>
-      </main>
-
-      {/* Comment Composer Footer */}
+      {/* Comment Composer — sticky to the bottom of the column */}
       {user && (
-        <footer className="fixed bottom-0 left-0 w-full backdrop-blur-lg z-40 py-4 px-4 shadow-[0_-4px_20px_rgba(14,165,233,0.1)]" style={{ background: "color-mix(in srgb, var(--surface) 95%, transparent)", borderTop: "1px solid var(--border)" }}>
-          <div className="max-w-[800px] mx-auto w-full flex flex-col gap-2">
+        <footer className="sticky bottom-0 z-30 mt-auto py-3 px-4" style={{ background: "color-mix(in srgb, var(--surface) 92%, transparent)", borderTop: "1px solid var(--border)", backdropFilter: "blur(8px)" }}>
+          <div className="w-full flex flex-col gap-2">
             <div className="relative flex items-center gap-2 px-2">
               <span className="text-xs" style={{ color: "var(--text-secondary)" }}>Replying as</span>
               <button
@@ -675,13 +666,13 @@ export default function ThreadPage({ params }: { params: Promise<{ id: string }>
                   <button className="p-1 hover:text-primary transition-colors rounded"><span className="material-symbols-outlined !text-[18px]">link</span></button>
                 </div>
               </div>
-              <button onClick={() => handleComment()} disabled={submitting || !newComment.trim()} className="h-12 w-12 flex items-center justify-center bg-primary hover:bg-primary-dark text-white rounded-xl shadow-lg shadow-primary/30 transition-all hover:scale-105 active:scale-95 disabled:opacity-50 disabled:hover:scale-100">
+              <button onClick={() => handleComment()} disabled={submitting || !newComment.trim()} className="h-12 w-12 flex items-center justify-center text-white rounded-xl transition-all active:scale-95 disabled:opacity-50" style={{ background: "var(--color-primary)" }}>
                 <span className="material-symbols-outlined">send</span>
               </button>
             </div>
           </div>
         </footer>
       )}
-    </div>
+    </main>
   );
 }

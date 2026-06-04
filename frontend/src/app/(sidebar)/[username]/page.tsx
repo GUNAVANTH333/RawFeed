@@ -158,7 +158,7 @@ export default function ProfilePage() {
 
   if (profileLoading) {
     return (
-      <main className="flex-1 flex items-center justify-center" style={{ background: "var(--background)" }}>
+      <main className="flex-1 flex items-center justify-center" style={{ background: "var(--surface)" }}>
         <div className="animate-pulse flex flex-col items-center gap-4 text-primary">
           <div className="size-16 rounded-full bg-current/20"></div>
           <div className="h-6 w-32 rounded bg-current/20"></div>
@@ -169,7 +169,7 @@ export default function ProfilePage() {
 
   if (profileError || !profileUser) {
     return (
-      <main className="flex-1 flex flex-col items-center justify-center gap-4" style={{ background: "var(--background)" }}>
+      <main className="flex-1 flex flex-col items-center justify-center gap-4" style={{ background: "var(--surface)" }}>
         <span className="material-symbols-outlined text-6xl text-red-500">error</span>
         <h2 className="text-2xl font-bold" style={{ color: "var(--text-primary)" }}>Profile Not Found</h2>
         <p style={{ color: "var(--text-secondary)" }}>{profileError || "The requested user does not exist."}</p>
@@ -183,7 +183,7 @@ export default function ProfilePage() {
   const displayedLoading = showingAnon ? anonLoading : threadsLoading;
 
   return (
-    <main className="flex-1 overflow-y-auto" style={{ background: "var(--background)" }}>
+    <main className="flex-1 overflow-y-auto" style={{ background: "var(--surface)" }}>
       {/* Profile Header */}
       <section className="relative px-6 py-12 md:px-12 md:py-16" style={{ background: "var(--surface)", borderBottom: "1px solid var(--border-subtle)" }}>
         <div className="max-w-4xl mx-auto flex flex-col md:flex-row gap-8 items-center">
@@ -198,11 +198,10 @@ export default function ProfilePage() {
               />
             ) : (
               <div
-                className="size-28 md:size-36 rounded-full shadow-lg ring-[3px] flex items-center justify-center relative overflow-hidden"
-                style={{ background: "var(--surface-hover)", "--tw-ring-color": "var(--border-subtle)" } as React.CSSProperties}
+                className="size-28 md:size-36 rounded-full ring-[3px] flex items-center justify-center"
+                style={{ background: "var(--color-primary)", "--tw-ring-color": "var(--border-subtle)" } as React.CSSProperties}
               >
-                <div className="absolute inset-0 bg-[conic-gradient(from_90deg_at_50%_50%,_#818CF8_0%,_#C084FC_50%,_#818CF8_100%)] opacity-80"></div>
-                <span className="relative text-5xl md:text-6xl font-bold text-white uppercase tracking-wider drop-shadow-md">
+                <span className="text-5xl md:text-6xl font-bold text-white uppercase tracking-wider">
                   {profileUser.username[0]}
                 </span>
               </div>

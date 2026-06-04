@@ -30,7 +30,7 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-[var(--background)] px-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center size-14 rounded-xl bg-gradient-to-br from-primary to-cyan-500 shadow-lg shadow-primary/20 mb-4">
+          <div className="inline-flex items-center justify-center size-14 rounded-xl mb-4" style={{ background: "var(--color-primary)" }}>
             <span className="material-symbols-outlined text-white text-3xl">rss_feed</span>
           </div>
           <h1 className="text-2xl font-bold text-[var(--text-primary)]">Welcome back</h1>
@@ -50,7 +50,7 @@ export default function LoginPage() {
               type="text"
               value={identifier}
               onChange={(e) => setIdentifier(e.target.value)}
-              className="w-full px-4 py-3 rounded-lg bg-sky-50 dark:bg-slate-800 border border-sky-100 dark:border-slate-700 text-[var(--text-primary)] text-sm focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none transition-all placeholder:text-slate-400"
+              className="w-full px-4 py-3 rounded-lg text-sm outline-none transition-all bg-[var(--surface-hover)] border border-[var(--border)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:border-[var(--text-primary)]"
               placeholder="you@example.com or username"
               required
             />
@@ -62,7 +62,7 @@ export default function LoginPage() {
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-3 rounded-lg bg-sky-50 dark:bg-slate-800 border border-sky-100 dark:border-slate-700 text-[var(--text-primary)] text-sm focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none transition-all placeholder:text-slate-400"
+              className="w-full px-4 py-3 rounded-lg text-sm outline-none transition-all bg-[var(--surface-hover)] border border-[var(--border)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:border-[var(--text-primary)]"
               placeholder="••••••••"
               required
             />
@@ -71,7 +71,8 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-primary hover:bg-primary-dark text-white font-semibold py-3 rounded-lg transition-colors shadow-lg shadow-primary/20 disabled:opacity-50"
+            className="w-full text-white font-semibold py-3 rounded-lg transition-opacity hover:opacity-90 disabled:opacity-50"
+            style={{ background: "var(--color-primary)" }}
           >
             {loading ? "Signing in..." : "Sign In"}
           </button>

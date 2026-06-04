@@ -106,7 +106,7 @@ export default function NotificationsPage() {
 
   if (authLoading || loading) {
     return (
-      <main className="flex-1 flex items-center justify-center" style={{ background: "var(--background)" }}>
+      <main className="flex-1 flex items-center justify-center" style={{ background: "var(--surface)" }}>
         <div className="animate-pulse" style={{ color: "var(--text-muted)" }}>Loading...</div>
       </main>
     );
@@ -114,7 +114,7 @@ export default function NotificationsPage() {
 
   if (!user) {
     return (
-      <main className="flex-1 flex flex-col items-center justify-center p-8" style={{ background: "var(--background)" }}>
+      <main className="flex-1 flex flex-col items-center justify-center p-8" style={{ background: "var(--surface)" }}>
         <span className="material-symbols-outlined text-6xl mb-4" style={{ color: "var(--text-muted)" }}>notifications</span>
         <h2 className="text-2xl font-bold mb-2" style={{ color: "var(--text-primary)" }}>Sign in to see notifications</h2>
         <p className="mb-6" style={{ color: "var(--text-secondary)" }}>Stay updated with replies, mentions, and more</p>
@@ -126,12 +126,12 @@ export default function NotificationsPage() {
   }
 
   return (
-    <main className="flex-1 overflow-y-auto flex flex-col" style={{ background: "var(--background)" }}>
+    <main className="flex-1 overflow-y-auto flex flex-col" style={{ background: "var(--surface)" }}>
       <div className="w-full max-w-2xl mx-auto flex flex-col min-h-full">
         {/* Header */}
         <header
           className="sticky top-0 z-10 backdrop-blur-md px-6 py-5 flex items-center justify-between"
-          style={{ background: "color-mix(in srgb, var(--background) 92%, transparent)", borderBottom: "1px solid var(--border-subtle)" }}
+          style={{ background: "color-mix(in srgb, var(--surface) 92%, transparent)", borderBottom: "1px solid var(--border-subtle)" }}
         >
           <div>
             <h2 className="text-xl font-bold tracking-tight flex items-center gap-2" style={{ color: "var(--text-primary)" }}>
@@ -163,10 +163,7 @@ export default function NotificationsPage() {
             <p className="text-sm" style={{ color: "var(--text-muted)" }}>You&apos;re all caught up!</p>
           </div>
         ) : (
-          <div
-            className="rounded-xl overflow-hidden mx-4 mt-4 shadow-sm"
-            style={{ background: "var(--surface)", border: "1px solid var(--border-subtle)" }}
-          >
+          <div>
             {notifications.map((n) => (
               <NotificationItem key={n.id} n={n} onRead={handleRead} />
             ))}

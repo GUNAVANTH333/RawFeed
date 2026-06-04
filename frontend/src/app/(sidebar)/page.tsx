@@ -4,9 +4,8 @@ import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { getThreads, likeThread, type Thread, type Pagination } from "@/lib/api";
 import { bgColors, textColors, getColorIdx } from "@/lib/avatar";
+import { IncognitoIcon } from "@/components/IncognitoIcon";
 import { useAuth } from "@/lib/AuthContext";
-
-const categories = ["For You", "Global News", "Tech & Science", "Finance"];
 
 function timeAgo(dateStr: string) {
   const diff = Date.now() - new Date(dateStr).getTime();
@@ -22,7 +21,6 @@ export default function HomePage() {
   const { user } = useAuth();
   const [threads, setThreads] = useState<Thread[]>([]);
   const [pagination, setPagination] = useState<Pagination | null>(null);
-  const [activeCategory, setActiveCategory] = useState("For You");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -44,222 +42,189 @@ export default function HomePage() {
       return;
     }
 
-    // Optimistic UI update
     setThreads((prev) =>
-      prev.map((t) => {
-        if (t.id === threadId) {
-          return {
-            ...t,
-            isLiked: !t.isLiked,
-            likeCount: t.isLiked ? t.likeCount - 1 : t.likeCount + 1,
-          };
-        }
-        return t;
-      })
+      prev.map((t) =>
+        t.id === threadId
+          ? { ...t, isLiked: !t.isLiked, likeCount: t.isLiked ? t.likeCount - 1 : t.likeCount + 1 }
+          : t
+      )
     );
 
     try {
       const { liked, likeCount } = await likeThread(threadId);
-      // Ensure backend sync
       setThreads((prev) =>
         prev.map((t) => (t.id === threadId ? { ...t, isLiked: liked, likeCount } : t))
       );
     } catch {
-      // Revert optimistic update on failure
       setThreads((prev) =>
-        prev.map((t) => {
-          if (t.id === threadId) {
-            return {
-              ...t,
-              isLiked: !t.isLiked,
-              likeCount: !t.isLiked ? t.likeCount - 1 : t.likeCount + 1,
-            };
-          }
-          return t;
-        })
+        prev.map((t) =>
+          t.id === threadId
+            ? { ...t, isLiked: !t.isLiked, likeCount: !t.isLiked ? t.likeCount - 1 : t.likeCount + 1 }
+            : t
+        )
       );
     }
   }, [user]);
 
   return (
-    <>
-      <main className="flex-1 flex flex-col h-full overflow-hidden relative" style={{ background: "var(--background)" }}>
+    <main className="flex-1 overflow-y-auto overflow-x-hidden" style={{ background: "var(--surface)" }}>
+      {/* The feed fills the framed column provided by the sidebar layout. */}
+      <div className="min-h-full">
+        {/* Top bar — search + new thread */}
         <header
-          className="sticky top-0 z-20 flex items-center justify-between px-6 py-4 backdrop-blur-md"
-          style={{ background: "color-mix(in srgb, var(--surface) 80%, transparent)", borderBottom: "1px solid var(--border-subtle)" }}
+          className="sticky top-0 z-20 flex items-center gap-3 px-4 py-3"
+          style={{ background: "color-mix(in srgb, var(--surface) 85%, transparent)", borderBottom: "1px solid var(--border)", backdropFilter: "blur(8px)" }}
         >
-          <h2 className="text-xl font-bold md:hidden" style={{ color: "var(--text-primary)" }}>RawFeed</h2>
-          <div className="flex-1 max-w-xl mx-auto w-full">
-            <label className="relative flex w-full">
-              <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none" style={{ color: "var(--text-muted)" }}>
-                <span className="material-symbols-outlined text-[20px]">search</span>
-              </div>
-              <input
-                className="w-full py-2.5 pl-10 pr-4 text-sm rounded-lg border-none outline-none transition-all"
-                style={{ background: "var(--surface-hover)", color: "var(--text-primary)" }}
-                placeholder="Search topics, sources, or verified threads..."
-                type="text"
-              />
-            </label>
-          </div>
-          <div className="flex items-center gap-4 ml-4">
-            <Link
-              href="/new-thread"
-              className="bg-primary hover:bg-primary-dark text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors flex items-center gap-2 shadow-lg shadow-primary/20"
-            >
-              <span className="material-symbols-outlined text-[18px]">add</span>
-              <span className="hidden sm:inline">New Thread</span>
-            </Link>
-          </div>
+          <label className="relative flex flex-1">
+            <span className="absolute inset-y-0 left-0 flex items-center justify-center pl-3 pointer-events-none" style={{ color: "var(--text-muted)" }}>
+              <span className="material-symbols-outlined text-[20px] leading-none">search</span>
+            </span>
+            <input
+              className="w-full py-2 pl-10 pr-4 text-sm rounded-lg outline-none transition-colors"
+              style={{ background: "var(--surface-hover)", color: "var(--text-primary)" }}
+              placeholder="Search threads, sources, topics…"
+              type="text"
+            />
+          </label>
+          <Link
+            href="/new-thread"
+            className="text-white text-sm font-semibold px-4 py-2 rounded-lg transition-opacity hover:opacity-90 flex items-center gap-1.5 shrink-0"
+            style={{ background: "var(--color-primary)" }}
+          >
+            <span className="material-symbols-outlined text-[18px]">add</span>
+            <span className="hidden sm:inline">New</span>
+          </Link>
         </header>
 
-        <div className="flex-1 overflow-y-auto overflow-x-hidden p-6 scroll-smooth">
-          <div className="max-w-[700px] mx-auto flex flex-col gap-6 pb-20">
-            {/* Category Filter Tabs */}
-            {/* <div className="flex gap-2 pb-2 overflow-x-auto no-scrollbar">
-              {categories.map((cat) => (
-                <button
-                  key={cat}
-                  onClick={() => setActiveCategory(cat)}
-                  className={`whitespace-nowrap px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
-                    activeCategory === cat
-                      ? "bg-primary text-white shadow-md shadow-primary/20"
-                      : ""
-                  }`}
-                  style={activeCategory !== cat ? {
-                    background: "var(--surface)",
-                    color: "var(--text-secondary)",
-                    border: "1px solid var(--border-subtle)",
-                  } : undefined}
-                >
-                  {cat}
-                </button>
-              ))}
-            </div> */}
-
-            {/* Thread Cards */}
-            {loading ? (
-              <div className="flex flex-col gap-6">
-                {[1, 2, 3].map((i) => (
-                  <div key={i} className="rounded-xl overflow-hidden animate-pulse" style={{ background: "var(--surface)", border: "1px solid var(--border-subtle)" }}>
-                    <div className="h-64" style={{ background: "var(--surface-hover)" }}></div>
-                    <div className="p-6 space-y-3">
-                      <div className="h-4 rounded w-1/3" style={{ background: "var(--surface-hover)" }}></div>
-                      <div className="h-6 rounded w-3/4" style={{ background: "var(--surface-hover)" }}></div>
-                      <div className="h-4 rounded w-full" style={{ background: "var(--surface-hover)" }}></div>
-                    </div>
+        {loading ? (
+          <div className="divide-y divide-[color:var(--border-subtle)]">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="p-5 animate-pulse">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="size-10 rounded-full" style={{ background: "var(--surface-hover)" }}></div>
+                  <div className="space-y-2">
+                    <div className="h-3 w-28 rounded" style={{ background: "var(--surface-hover)" }}></div>
+                    <div className="h-2.5 w-16 rounded" style={{ background: "var(--surface-hover)" }}></div>
                   </div>
-                ))}
-              </div>
-            ) : threads.length === 0 ? (
-              <div className="text-center py-20">
-                <span className="material-symbols-outlined text-6xl" style={{ color: "var(--text-muted)" }}>forum</span>
-                <p className="mt-4 text-lg" style={{ color: "var(--text-secondary)" }}>No threads yet</p>
-                <p className="text-sm mt-1" style={{ color: "var(--text-muted)" }}>Be the first to start a discussion</p>
-              </div>
-            ) : (
-              threads.map((thread) => {
-                return (
-                  <Link key={thread.id} href={`/threads/${thread.id}`}>
-                    <article
-                      className="rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-300 cursor-pointer"
-                      style={{ background: "var(--surface)", border: "1px solid var(--border-subtle)" }}
-                    >
-                      {thread.imageUrl && (
-                        <div className="relative h-64 w-full overflow-hidden group">
-                          <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent z-10"></div>
-                          <div
-                            className="w-full h-full bg-cover bg-center transition-transform duration-700 group-hover:scale-105"
-                            style={{ backgroundImage: `url('${thread.imageUrl}')` }}
-                          ></div>
-                        </div>
-                      )}
-                      <div className="p-6">
-                        <h3 className="text-2xl font-bold mb-2 leading-tight hover:text-primary transition-colors" style={{ color: "var(--text-primary)" }}>
-                          {thread.title}
-                        </h3>
-                        {thread.description && (() => {
-                          const words = thread.description.split(" ");
-                          const isLong = words.length > 50;
-                          const preview = isLong ? words.slice(0, 50).join(" ") + "…" : thread.description;
-                          return (
-                            <p className="text-sm mb-4 leading-relaxed" style={{ color: "var(--text-secondary)" }}>
-                              {preview}
-                              {isLong && (
-                                <span className="font-semibold ml-1 hover:underline" style={{ color: "var(--color-primary)" }}>
-                                  Read more →
-                                </span>
-                              )}
-                            </p>
-                          );
-                        })()}
-                        <div className="flex items-center justify-between pt-4" style={{ borderTop: "1px solid var(--border-subtle)" }}>
-                          <div className="flex items-center gap-3">
-                            <div className="size-8 rounded relative overflow-hidden ring-2" style={{ background: "var(--surface-hover)", "--tw-ring-color": "var(--surface)" } as React.CSSProperties}>
-                              {thread.isAnonymous ? (
-                                <div className={`absolute inset-0 flex items-center justify-center ${bgColors[getColorIdx(thread.creatorPseudonym || "Anonymous")]} ${textColors[getColorIdx(thread.creatorPseudonym || "Anonymous")]} text-sm font-bold uppercase`}>
-                                  {(thread.creatorPseudonym || "A").charAt(0)}
-                                </div>
-                              ) : thread.creator?.profilePhoto ? (
-                                <img src={thread.creator.profilePhoto} alt={thread.creator?.username || "User"} className="absolute inset-0 w-full h-full object-cover" />
-                              ) : (
-                                <div className="absolute inset-0 flex items-center justify-center bg-primary text-white text-sm font-bold uppercase">
-                                  {(thread.creator?.username || "?").charAt(0)}
-                                </div>
-                              )}
-                            </div>
-                            <span className="text-sm font-semibold" style={{ color: "var(--text-secondary)" }}>
-                              {thread.isAnonymous ? (thread.creatorPseudonym || "Anonymous") : (thread.creator?.username || "Anonymous")}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-4">
-                            {/* Like button */}
-                            <button
-                              onClick={(e) => handleLike(e, thread.id)}
-                              className="flex items-center gap-1.5 transition-colors group"
-                              style={{ color: thread.isLiked ? "var(--color-primary)" : "var(--text-muted)" }}
-                              aria-label={thread.isLiked ? "Unlike" : "Like"}
-                            >
-                              <span
-                                className={`material-symbols-outlined text-[20px] transition-transform group-hover:scale-110 ${thread.isLiked ? "fill-1" : ""}`}
-                              >
-                                favorite
-                              </span>
-                              {thread.likeCount > 0 && (
-                                <span className="text-xs font-medium">{thread.likeCount}</span>
-                              )}
-                            </button>
-                            {/* Comment count */}
-                            <div className="flex items-center gap-1.5" style={{ color: "var(--text-muted)" }}>
-                              <span className="material-symbols-outlined text-[18px]">chat_bubble</span>
-                              <span className="text-xs font-medium">{thread._count?.comments || 0}</span>
-                            </div>
-                            <button style={{ color: "var(--text-muted)" }} className="hover:text-primary transition-colors" onClick={(e) => e.preventDefault()}>
-                              <span className="material-symbols-outlined text-[18px]">ios_share</span>
-                            </button>
-                            <span className="text-xs font-medium" style={{ color: "var(--text-muted)" }}>{timeAgo(thread.createdAt)}</span>
-                          </div>
-                        </div>
-                      </div>
-                    </article>
-                  </Link>
-                );
-              })
-            )}
-
-            {/* Loading dots */}
-            {pagination && pagination.page < pagination.totalPages && (
-              <div className="flex justify-center py-8">
-                <div className="flex items-center gap-2 text-primary animate-pulse">
-                  <span className="size-2 bg-current rounded-full"></span>
-                  <span className="size-2 bg-current rounded-full"></span>
-                  <span className="size-2 bg-current rounded-full"></span>
                 </div>
+                <div className="h-5 w-3/4 rounded mb-3" style={{ background: "var(--surface-hover)" }}></div>
+                <div className="h-3 w-full rounded mb-2" style={{ background: "var(--surface-hover)" }}></div>
+                <div className="h-3 w-5/6 rounded" style={{ background: "var(--surface-hover)" }}></div>
               </div>
-            )}
+            ))}
           </div>
-        </div>
-      </main>
-    </>
+        ) : threads.length === 0 ? (
+          <div className="text-center py-24 px-6">
+            <span className="material-symbols-outlined text-5xl" style={{ color: "var(--text-muted)" }}>forum</span>
+            <p className="mt-4 text-lg font-semibold" style={{ color: "var(--text-secondary)" }}>No threads yet</p>
+            <p className="text-sm mt-1" style={{ color: "var(--text-muted)" }}>Be the first to start a discussion.</p>
+          </div>
+        ) : (
+          <div className="divide-y divide-[color:var(--border-subtle)]">
+            {threads.map((thread) => {
+              const isAnon = thread.isAnonymous;
+              const displayName = isAnon
+                ? (thread.creatorPseudonym || "Anonymous")
+                : (thread.creator?.username || "Anonymous");
+              const ci = getColorIdx(thread.creatorPseudonym || displayName);
+
+              return (
+                <Link key={thread.id} href={`/threads/${thread.id}`} className="block">
+                  <article className="p-5 cursor-pointer transition-colors hover:bg-[var(--surface-hover)]">
+                    {/* Author row */}
+                    <div className="flex items-center gap-3 mb-3.5">
+                      <div className={`size-10 relative overflow-hidden shrink-0 ${isAnon ? "rounded-md" : "rounded-full"}`} style={{ background: "var(--surface-hover)" }}>
+                        {isAnon ? (
+                          <div className={`absolute inset-0 flex items-center justify-center ${bgColors[ci]} ${textColors[ci]} text-base font-bold uppercase`}>
+                            {(thread.creatorPseudonym || "A").charAt(0)}
+                          </div>
+                        ) : thread.creator?.profilePhoto ? (
+                          <img src={thread.creator.profilePhoto} alt={displayName} className="absolute inset-0 w-full h-full object-cover" />
+                        ) : (
+                          <div className="absolute inset-0 flex items-center justify-center text-white text-base font-bold uppercase" style={{ background: "var(--color-primary)" }}>
+                            {displayName.charAt(0)}
+                          </div>
+                        )}
+                      </div>
+                      <div className="min-w-0 leading-tight">
+                        <div className="flex items-center gap-1">
+                          <span className="text-sm font-semibold truncate" style={{ color: "var(--text-primary)" }}>{displayName}</span>
+                          {isAnon && (
+                            <IncognitoIcon title="Anonymous" className="size-[15px] shrink-0" style={{ color: "var(--text-muted)" }} />
+                          )}
+                        </div>
+                        <span className="text-xs" style={{ color: "var(--text-muted)" }}>{timeAgo(thread.createdAt)}</span>
+                      </div>
+                    </div>
+
+                    {/* Title */}
+                    <h3 className="text-lg md:text-xl font-bold leading-snug tracking-tight mb-1.5" style={{ color: "var(--text-primary)" }}>
+                      {thread.title}
+                    </h3>
+
+                    {/* Description + read more */}
+                    {thread.description && (() => {
+                      const words = thread.description.split(" ");
+                      const isLong = words.length > 50;
+                      const preview = isLong ? words.slice(0, 50).join(" ") + "…" : thread.description;
+                      return (
+                        <p className="text-[15px] leading-relaxed" style={{ color: "var(--text-secondary)" }}>
+                          {preview}
+                          {isLong && (
+                            <span className="font-semibold ml-1 hover:underline" style={{ color: "var(--text-primary)" }}>Read more →</span>
+                          )}
+                        </p>
+                      );
+                    })()}
+
+                    {/* Image */}
+                    {thread.imageUrl && (
+                      <div className="mt-3.5 rounded-lg overflow-hidden aspect-[16/9]" style={{ border: "1px solid var(--border)" }}>
+                        <img src={thread.imageUrl} alt="" className="w-full h-full object-cover" />
+                      </div>
+                    )}
+
+                    {/* Footer actions */}
+                    <div className="flex items-center gap-6 mt-4">
+                      <button
+                        onClick={(e) => handleLike(e, thread.id)}
+                        className={`-ml-2 flex items-center gap-1.5 group px-2 py-1 rounded-lg transition-colors hover:bg-black/5 dark:hover:bg-white/5 hover:text-[#F43F5E] ${thread.isLiked ? "text-[#F43F5E]" : "text-[color:var(--text-muted)]"}`}
+                        aria-label={thread.isLiked ? "Unlike" : "Like"}
+                      >
+                        <span className={`material-symbols-outlined !text-[20px] transition-transform group-hover:scale-110 ${thread.isLiked ? "fill-1" : ""}`}>favorite</span>
+                        {thread.likeCount > 0 && <span className="text-sm font-medium">{thread.likeCount}</span>}
+                      </button>
+                      <div className="flex items-center gap-1.5" style={{ color: "var(--text-muted)" }}>
+                        <span className="material-symbols-outlined text-[20px]">chat_bubble</span>
+                        <span className="text-xs font-medium">{thread._count?.comments || 0}</span>
+                      </div>
+                      <button
+                        onClick={(e) => e.preventDefault()}
+                        className="ml-auto flex items-center transition-opacity hover:opacity-70"
+                        style={{ color: "var(--text-muted)" }}
+                        aria-label="Share"
+                      >
+                        <span className="material-symbols-outlined text-[20px]">ios_share</span>
+                      </button>
+                    </div>
+                  </article>
+                </Link>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Pagination indicator */}
+        {pagination && pagination.page < pagination.totalPages && (
+          <div className="flex justify-center py-8">
+            <div className="flex items-center gap-1.5 animate-pulse" style={{ color: "var(--text-muted)" }}>
+              <span className="size-1.5 bg-current rounded-full"></span>
+              <span className="size-1.5 bg-current rounded-full"></span>
+              <span className="size-1.5 bg-current rounded-full"></span>
+            </div>
+          </div>
+        )}
+      </div>
+    </main>
   );
 }
