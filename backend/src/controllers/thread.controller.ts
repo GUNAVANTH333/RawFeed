@@ -85,6 +85,24 @@ export class ThreadController {
     }
   };
 
+  getMyAnonymous = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    try {
+      if (!req.userId) {
+        res.status(401).json({ error: "Unauthorized" });
+        return;
+      }
+
+      const page = parseInt(req.query["page"] as string) || 1;
+      const limit = parseInt(req.query["limit"] as string) || 20;
+
+      const result = await this.threadService.getMyAnonymousThreads(req.userId, page, limit);
+
+      res.status(200).json(result);
+    } catch (error) {
+      res.status(500).json({ error: "Internal server error" });
+    }
+  };
+
   getById = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       const { id } = req.params as { id: string };

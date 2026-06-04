@@ -83,7 +83,7 @@ export class ThreadService {
 
     const [threads, total] = await Promise.all([
       prisma.thread.findMany({
-        where: { creator: { username } },
+        where: { isAnonymous:false ,creator: { username } },
         skip,
         take: limit,
         orderBy: { createdAt: "desc" },
@@ -93,7 +93,7 @@ export class ThreadService {
           likes: viewerId ? { where: { userId: viewerId }, select: { id: true } } : false,
         },
       }),
-      prisma.thread.count({ where: { creator: { username } } }),
+      prisma.thread.count({ where: { isAnonymous: false, creator: { username } } }),
     ]);
 
     return {
@@ -103,6 +103,49 @@ export class ThreadService {
         isLiked: viewerId ? t.likes.length > 0 : false,
         likes: undefined,
       })),
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
+  };
+
+  // Owner-only: the caller's OWN anonymous threads, keyed off the authenticated
+  // userId (never a username), so it is impossible to fetch anyone else's.
+  getMyAnonymousThreads = async (userId: string, page: number = 1, limit: number = 20) => {
+    const skip = (page - 1) * limit;
+
+    const [threads, total] = await Promise.all([
+      prisma.thread.findMany({
+        where: { creatorId: userId, isAnonymous: true },
+        skip,
+        take: limit,
+        orderBy: { createdAt: "desc" },
+        include: {
+          _count: { select: { comments: true, participants: true, likes: true } },
+          likes: { where: { userId }, select: { id: true } },
+        },
+      }),
+      prisma.thread.count({ where: { creatorId: userId, isAnonymous: true } }),
+    ]);
+
+    return {
+      threads: threads.map((t) => {
+        // Strip the raw creatorId and keep the anonymous shape consistent. Show
+        // the pseudonym so the owner can tell their anonymous identities apart
+        // (safe: it's their own data).
+        const { creatorId, ...rest } = t;
+        return {
+          ...rest,
+          likeCount: t._count.likes,
+          isLiked: t.likes.length > 0,
+          likes: undefined,
+          isOwner: true,
+          creatorPseudonym: this.identityService.generatePseudonym(userId, t.id),
+        };
+      }),
       pagination: {
         page,
         limit,

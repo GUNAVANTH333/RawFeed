@@ -7,6 +7,7 @@ import { useAuth } from "@/lib/AuthContext";
 import {
   getPublicProfile,
   getUserThreads,
+  getMyAnonymousThreads,
   likeThread,
   updateProfile,
   type User,
@@ -38,6 +39,12 @@ export default function ProfilePage() {
   const [pagination, setPagination] = useState<Pagination | null>(null);
   const [threadsLoading, setThreadsLoading] = useState(true);
 
+  // Posts vs. owner-only Anonymous tab (Instagram-style switch)
+  const [activeTab, setActiveTab] = useState<"posts" | "anonymous">("posts");
+  const [anonThreads, setAnonThreads] = useState<Thread[]>([]);
+  const [anonLoading, setAnonLoading] = useState(false);
+  const [anonLoaded, setAnonLoaded] = useState(false);
+
   // Edit Mode state
   const [isEditing, setIsEditing] = useState(false);
   const [editBio, setEditBio] = useState("");
@@ -49,6 +56,12 @@ export default function ProfilePage() {
   // Initial Data Fetch
   useEffect(() => {
     if (!username) return;
+
+    // Reset tab/anonymous state when switching profiles
+    setActiveTab("posts");
+    setAnonThreads([]);
+    setAnonLoaded(false);
+    setAnonLoading(false);
 
     setProfileLoading(true);
     getPublicProfile(username)
@@ -72,6 +85,27 @@ export default function ProfilePage() {
       .finally(() => setThreadsLoading(false));
   }, [username]);
 
+  const loadAnonymous = useCallback(() => {
+    setAnonLoading(true);
+    getMyAnonymousThreads(1, 20)
+      .then((data) => {
+        setAnonThreads(data.threads);
+        setAnonLoaded(true);
+      })
+      .catch(() => {})
+      .finally(() => setAnonLoading(false));
+  }, []);
+
+  const handleSelectTab = useCallback(
+    (tab: "posts" | "anonymous") => {
+      setActiveTab(tab);
+      if (tab === "anonymous" && !anonLoaded && !anonLoading) {
+        loadAnonymous();
+      }
+    },
+    [anonLoaded, anonLoading, loadAnonymous]
+  );
+
   const handleLike = useCallback(
     async (e: React.MouseEvent, threadId: string) => {
       e.preventDefault();
@@ -82,37 +116,24 @@ export default function ProfilePage() {
         return;
       }
 
-      setThreads((prev) =>
-        prev.map((t) => {
-          if (t.id === threadId) {
-            return {
-              ...t,
-              isLiked: !t.isLiked,
-              likeCount: t.isLiked ? t.likeCount - 1 : t.likeCount + 1,
-            };
-          }
-          return t;
-        })
-      );
+      // Apply the same update to whichever list contains the thread (posts or anonymous)
+      const toggle = (t: Thread): Thread =>
+        t.id === threadId
+          ? { ...t, isLiked: !t.isLiked, likeCount: t.isLiked ? t.likeCount - 1 : t.likeCount + 1 }
+          : t;
+
+      setThreads((prev) => prev.map(toggle));
+      setAnonThreads((prev) => prev.map(toggle));
 
       try {
         const { liked, likeCount } = await likeThread(threadId);
-        setThreads((prev) =>
-          prev.map((t) => (t.id === threadId ? { ...t, isLiked: liked, likeCount } : t))
-        );
+        const apply = (t: Thread): Thread => (t.id === threadId ? { ...t, isLiked: liked, likeCount } : t);
+        setThreads((prev) => prev.map(apply));
+        setAnonThreads((prev) => prev.map(apply));
       } catch {
-        setThreads((prev) =>
-          prev.map((t) => {
-            if (t.id === threadId) {
-              return {
-                ...t,
-                isLiked: !t.isLiked,
-                likeCount: !t.isLiked ? t.likeCount - 1 : t.likeCount + 1,
-              };
-            }
-            return t;
-          })
-        );
+        // Revert on failure
+        setThreads((prev) => prev.map(toggle));
+        setAnonThreads((prev) => prev.map(toggle));
       }
     },
     [currentUser]
@@ -156,6 +177,10 @@ export default function ProfilePage() {
       </main>
     );
   }
+
+  const showingAnon = activeTab === "anonymous";
+  const displayedThreads = showingAnon ? anonThreads : threads;
+  const displayedLoading = showingAnon ? anonLoading : threadsLoading;
 
   return (
     <main className="flex-1 overflow-y-auto" style={{ background: "var(--background)" }}>
@@ -270,26 +295,52 @@ export default function ProfilePage() {
 
       {/* User Threads Feed */}
       <section className="px-6 py-8 md:px-12 md:py-12 max-w-4xl mx-auto">
-        <h3 className="text-xl font-bold mb-6 flex items-center gap-3" style={{ color: "var(--text-primary)" }}>
-          <span className="material-symbols-outlined text-primary">forum</span>
-          Threads by {profileUser.username}
-        </h3>
+        {isMyProfile ? (
+          /* Posts / Anonymous tab switcher — owner only */
+          <div className="flex items-center gap-1 mb-6 p-1 rounded-xl w-fit" style={{ background: "var(--surface-hover)", border: "1px solid var(--border-subtle)" }}>
+            <button
+              onClick={() => handleSelectTab("posts")}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all"
+              style={showingAnon
+                ? { color: "var(--text-secondary)", background: "transparent" }
+                : { color: "#fff", background: "var(--color-primary)" }}
+            >
+              <span className="material-symbols-outlined text-[18px]">forum</span>
+              Posts
+            </button>
+            <button
+              onClick={() => handleSelectTab("anonymous")}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all"
+              style={showingAnon
+                ? { color: "#fff", background: "var(--color-primary)" }
+                : { color: "var(--text-secondary)", background: "transparent" }}
+            >
+              <span className="material-symbols-outlined text-[18px]">visibility_off</span>
+              Anonymous
+            </button>
+          </div>
+        ) : (
+          <h3 className="text-xl font-bold mb-6 flex items-center gap-3" style={{ color: "var(--text-primary)" }}>
+            <span className="material-symbols-outlined text-primary">forum</span>
+            Threads by {profileUser.username}
+          </h3>
+        )}
 
-        {threadsLoading ? (
+        {displayedLoading ? (
             <div className="flex flex-col gap-6">
             {[1, 2, 3].map((i) => (
               <div key={i} className="rounded-xl overflow-hidden animate-pulse h-32" style={{ background: "var(--surface)", border: "1px solid var(--border-subtle)" }}></div>
             ))}
           </div>
-        ) : threads.length === 0 ? (
+        ) : displayedThreads.length === 0 ? (
           <div className="text-center py-16 px-6 rounded-xl border border-dashed" style={{ borderColor: "var(--border-subtle)", background: "color-mix(in srgb, var(--surface) 50%, transparent)" }}>
-            <span className="material-symbols-outlined text-5xl mb-3" style={{ color: "var(--text-muted)" }}>history_edu</span>
-            <p className="font-medium text-lg" style={{ color: "var(--text-secondary)" }}>No threads found</p>
-            <p className="text-sm mt-1" style={{ color: "var(--text-muted)" }}>This user hasn't posted anything yet.</p>
+            <span className="material-symbols-outlined text-5xl mb-3" style={{ color: "var(--text-muted)" }}>{showingAnon ? "visibility_off" : "history_edu"}</span>
+            <p className="font-medium text-lg" style={{ color: "var(--text-secondary)" }}>{showingAnon ? "No anonymous posts" : "No threads found"}</p>
+            <p className="text-sm mt-1" style={{ color: "var(--text-muted)" }}>{showingAnon ? "Threads you post anonymously will appear here, visible only to you." : (isMyProfile ? "You haven't posted anything yet." : "This user hasn't posted anything yet.")}</p>
           </div>
         ) : (
           <div className="flex flex-col gap-5">
-            {threads.map((thread) => (
+            {displayedThreads.map((thread) => (
               <Link key={thread.id} href={`/threads/${thread.id}`}>
                 <article
                   className="rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-300 cursor-pointer flex flex-col sm:flex-row group"
@@ -302,6 +353,12 @@ export default function ProfilePage() {
                     ></div>
                   )}
                   <div className="p-5 flex-1 flex flex-col justify-center">
+                    {showingAnon && thread.creatorPseudonym && (
+                      <span className="inline-flex items-center gap-1 text-[11px] font-semibold mb-2 px-2 py-0.5 rounded-full w-fit" style={{ background: "var(--surface-hover)", color: "var(--text-muted)" }}>
+                        <span className="material-symbols-outlined text-[13px]">visibility_off</span>
+                        posted as {thread.creatorPseudonym}
+                      </span>
+                    )}
                     <h4 className="text-lg font-bold mb-1 group-hover:text-primary transition-colors line-clamp-2" style={{ color: "var(--text-primary)" }}>
                       {thread.title}
                     </h4>
@@ -310,12 +367,17 @@ export default function ProfilePage() {
                         {thread.url}
                       </p>
                     )}
-                    
+
                     <div className="flex items-center gap-4 mt-auto pt-4" style={{ borderTop: "1px solid var(--border-subtle)" }}>
-                      <div className="flex items-center gap-1.5 transition-colors" style={{ color: thread.isLiked ? "var(--color-primary)" : "var(--text-muted)" }}>
+                      <button
+                        onClick={(e) => handleLike(e, thread.id)}
+                        className="flex items-center gap-1.5 transition-colors hover:opacity-80"
+                        style={{ color: thread.isLiked ? "var(--color-primary)" : "var(--text-muted)" }}
+                        aria-label={thread.isLiked ? "Unlike" : "Like"}
+                      >
                         <span className={`material-symbols-outlined text-[16px] ${thread.isLiked ? "fill-1" : ""}`}>favorite</span>
                         <span className="text-xs font-medium">{thread.likeCount}</span>
-                      </div>
+                      </button>
                       <div className="flex items-center gap-1.5" style={{ color: "var(--text-muted)" }}>
                         <span className="material-symbols-outlined text-[16px]">chat_bubble</span>
                         <span className="text-xs font-medium">{thread._count?.comments || 0}</span>
@@ -329,7 +391,7 @@ export default function ProfilePage() {
           </div>
         )}
 
-        {pagination && pagination.page < pagination.totalPages && (
+        {!showingAnon && pagination && pagination.page < pagination.totalPages && (
           <div className="flex justify-center py-8">
             <button className="text-sm font-semibold px-6 py-2 rounded-full border border-primary text-primary hover:bg-primary hover:text-white transition-colors">
               Load More

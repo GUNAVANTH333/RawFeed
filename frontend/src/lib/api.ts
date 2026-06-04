@@ -86,6 +86,11 @@ export async function getUserThreads(username: string, page = 1, limit = 20) {
   return request<{ threads: Thread[]; pagination: Pagination }>(`/api/threads/user/${username}?page=${page}&limit=${limit}`);
 }
 
+// Owner-only: the logged-in user's own anonymous threads (scoped to their auth token).
+export async function getMyAnonymousThreads(page = 1, limit = 20) {
+  return request<{ threads: Thread[]; pagination: Pagination }>(`/api/threads/me/anonymous?page=${page}&limit=${limit}`);
+}
+
 export async function likeThread(threadId: string) {
   return request<{ liked: boolean; likeCount: number }>(`/api/threads/${threadId}/like`, {
     method: "POST",
