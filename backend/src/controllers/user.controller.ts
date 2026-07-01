@@ -28,7 +28,7 @@ export class UserController {
 
       const user = await this.userService.createUser(email, password, username);
 
-      generateToken(res, user.id);
+      generateToken(res, user.id, user.role);
 
       res.status(201).json({
         message: "User registered successfully",
@@ -75,7 +75,7 @@ export class UserController {
         return;
       }
 
-      generateToken(res, user.id);
+      generateToken(res, user.id, user.role);
 
       res.status(200).json({
         message: "Logged in successfully",

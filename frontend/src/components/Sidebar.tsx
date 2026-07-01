@@ -39,6 +39,7 @@ export default function Sidebar() {
     { href: "/", label: "Home", icon: "home" },
     { href: "/new-thread", label: "New Thread", icon: "add_box" },
     { href: "/notifications", label: "Notifications", icon: "notifications", badge: unreadCount },
+    ...(user?.role === "ADMIN" ? [{ href: "/admin/reports", label: "Admin", icon: "admin_panel_settings", badge: 0 }] : []),
   ];
 
   // ─── Desktop Sidebar ────────────────────────────────────────────────────────

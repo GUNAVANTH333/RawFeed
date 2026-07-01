@@ -3,8 +3,8 @@ import type { Response } from "express";
 
 const JWT_SECRET = process.env["JWT_SECRET"] ?? "fallback_secret";
 
-export const generateToken = (res: Response, userId: string): void => {
-  const token = jwt.sign({ userId }, JWT_SECRET, {
+export const generateToken = (res: Response, userId: string, role: string): void => {
+  const token = jwt.sign({ userId, role }, JWT_SECRET, {
     expiresIn: "7d",
   });
 

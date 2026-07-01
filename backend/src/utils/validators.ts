@@ -57,3 +57,20 @@ export const VoteSchema = z.object({
     message: "Vote type must be 'up' or 'down'",
   }),
 });
+
+export const ReportSchema = z.object({
+  reason: z.string().min(1, "Reason is required").max(500, "Reason must be at most 500 characters"),
+});
+
+export const AdminBanUserSchema = z.object({
+  reason: z.string().min(1, "Reason is required").max(500, "Reason must be at most 500 characters"),
+});
+
+export const AdminShadowScoreSchema = z.object({
+  delta: z.number().int().min(-100).max(100),
+  reason: z.string().min(1, "Reason is required").max(500, "Reason must be at most 500 characters"),
+});
+
+export const AdminResolveReportSchema = z.object({
+  action: z.enum(["DISMISSED", "SHADOW_SCORE_INCREASED", "CONTENT_DELETED", "USER_BANNED"]),
+});

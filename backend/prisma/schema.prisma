@@ -6,6 +6,11 @@ datasource db {
   provider = "postgresql"
 }
 
+enum Role {
+  USER
+  ADMIN
+}
+
 model User {
   id           String   @id @default(uuid())
   email        String   @unique
@@ -17,12 +22,15 @@ model User {
   isBanned     Boolean  @default(false)
   bio          String?
   profilePhoto String?
+  role         Role     @default(USER)
 
   participations   ThreadParticipant[]
   submittedThreads Thread[]
   votes            Vote[]
   threadLikes      ThreadLike[]
   notifications    Notification[]
+  reportsMade      Report[]            @relation("ReportsMade")
+  reportsReceived  Report[]            @relation("ReportsReceived")
 
   @@map("users")
 }
@@ -43,6 +51,7 @@ model Thread {
   comments     Comment[]
   participants ThreadParticipant[]
   likes        ThreadLike[]
+  reports      Report[]
 
   @@index([domain])
   @@map("threads")
@@ -81,6 +90,7 @@ model Comment {
   parent      Comment?          @relation("CommentReplies", fields: [parentId], references: [id])
   replies     Comment[]         @relation("CommentReplies")
   votes       Vote[]
+  reports     Report[]
 
   @@map("comments")
 }
@@ -141,4 +151,30 @@ model Notification {
 
   @@index([recipientId, isRead])
   @@map("notifications")
+}
+
+model Report {
+  id             String    @id @default(uuid())
+  reason         String
+  createdAt      DateTime  @default(now())
+  resolved       Boolean   @default(false)
+  resolvedAt     DateTime?
+  action         String?   // "DISMISSED" | "CONTENT_DELETED" | "USER_BANNED"
+  resolvedById   String?
+
+  reporterId     String
+  reporter       User    @relation("ReportsMade", fields: [reporterId], references: [id], onDelete: Cascade)
+
+  reportedUserId String
+  reportedUser   User    @relation("ReportsReceived", fields: [reportedUserId], references: [id], onDelete: Cascade)
+
+  threadId  String?
+  thread    Thread?  @relation(fields: [threadId], references: [id], onDelete: Cascade)
+
+  commentId String?
+  comment   Comment? @relation(fields: [commentId], references: [id], onDelete: Cascade)
+
+  @@index([resolved])
+  @@index([reportedUserId])
+  @@map("reports")
 }

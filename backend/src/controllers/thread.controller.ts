@@ -1,12 +1,15 @@
 import type { Response } from "express";
 import { ThreadService } from "../services/thread.service.js";
+import { UserService } from "../services/user.service.js";
 import type { AuthenticatedRequest } from "../types/express.js";
 
 export class ThreadController {
   private threadService: ThreadService;
+  private userService: UserService;
 
   constructor() {
     this.threadService = new ThreadService();
+    this.userService = new UserService();
   }
 
   create = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
@@ -198,6 +201,34 @@ export class ThreadController {
 
       res.status(200).json(result);
     } catch (error) {
+      res.status(500).json({ error: "Internal server error" });
+    }
+  };
+
+  reportThread = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    try {
+      if (!req.userId) {
+        res.status(401).json({ error: "Unauthorized" });
+        return;
+      }
+
+      const { id } = req.params as { id: string };
+      const { reason } = req.body as { reason: string };
+
+      const ownerId = await this.threadService.getThreadOwnerId(id);
+      if (!ownerId) {
+        res.status(404).json({ error: "Thread not found" });
+        return;
+      }
+
+      await this.userService.createReport(req.userId, ownerId, reason, id);
+
+      res.status(201).json({ message: "Thread reported successfully" });
+    } catch (error) {
+      if (error instanceof Error && error.message === "SELF_REPORT") {
+        res.status(400).json({ error: "You cannot report your own content" });
+        return;
+      }
       res.status(500).json({ error: "Internal server error" });
     }
   };

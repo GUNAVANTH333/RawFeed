@@ -151,6 +151,7 @@ export interface User {
   createdAt: string;
   shadowScore: number;
   isBanned: boolean;
+  role: "USER" | "ADMIN";
 }
 
 export interface Thread {
@@ -235,4 +236,73 @@ export async function markAllNotificationsRead(): Promise<void> {
 
 export async function markNotificationRead(id: string): Promise<void> {
   return request(`/api/notifications/${id}/read`, { method: "PUT" });
+}
+
+// ─── Reports ─────────────────────────────────────────────────────────────────
+
+export async function reportThread(threadId: string, reason: string): Promise<void> {
+  return request(`/api/threads/${threadId}/report`, { method: "POST", body: JSON.stringify({ reason }) });
+}
+
+export async function reportComment(commentId: string, reason: string): Promise<void> {
+  return request(`/api/comments/${commentId}/report`, { method: "POST", body: JSON.stringify({ reason }) });
+}
+
+// ─── Admin ────────────────────────────────────────────────────────────────────
+
+export interface AdminReport {
+  id: string;
+  reason: string;
+  createdAt: string;
+  resolved: boolean;
+  action: string | null;
+  reporter: { id: string; username: string };
+  reportedUser: { id: string; username: string; shadowScore: number; isBanned: boolean };
+  thread: { id: string; title: string } | null;
+  comment: { id: string; content: string } | null;
+}
+
+export interface AdminUser {
+  id: string;
+  username: string;
+  email: string;
+  role: "USER" | "ADMIN";
+  shadowScore: number;
+  isBanned: boolean;
+  createdAt: string;
+  _count: { reportsReceived: number };
+}
+
+export async function getAdminReports(page = 1, resolved?: boolean): Promise<{ reports: AdminReport[]; total: number; totalPages: number }> {
+  const params = new URLSearchParams({ page: String(page) });
+  if (resolved !== undefined) params.set("resolved", String(resolved));
+  return request(`/api/admin/reports?${params}`);
+}
+
+export async function resolveReport(reportId: string, action: "DISMISSED" | "SHADOW_SCORE_INCREASED" | "CONTENT_DELETED" | "USER_BANNED"): Promise<void> {
+  return request(`/api/admin/reports/${reportId}`, { method: "PATCH", body: JSON.stringify({ action }) });
+}
+
+export async function getAdminUsers(page = 1): Promise<{ users: AdminUser[]; total: number; totalPages: number }> {
+  return request(`/api/admin/users?page=${page}`);
+}
+
+export async function banUser(userId: string, reason: string): Promise<void> {
+  return request(`/api/admin/users/${userId}/ban`, { method: "PATCH", body: JSON.stringify({ reason }) });
+}
+
+export async function unbanUser(userId: string): Promise<void> {
+  return request(`/api/admin/users/${userId}/unban`, { method: "PATCH" });
+}
+
+export async function adjustShadowScore(userId: string, delta: number, reason: string): Promise<void> {
+  return request(`/api/admin/users/${userId}/shadow-score`, { method: "PATCH", body: JSON.stringify({ delta, reason }) });
+}
+
+export async function adminDeleteThread(threadId: string): Promise<void> {
+  return request(`/api/admin/threads/${threadId}`, { method: "DELETE" });
+}
+
+export async function adminDeleteComment(commentId: string): Promise<void> {
+  return request(`/api/admin/comments/${commentId}`, { method: "DELETE" });
 }

@@ -7,6 +7,7 @@ import threadRoutes from "./routes/thread.routes.js";
 import commentRoutes from "./routes/comment.routes.js";
 import authRoutes from "./routes/auth.routes.js";
 import notificationRoutes from "./routes/notification.routes.js";
+import adminRoutes from "./routes/admin.routes.js";
 
 const app = express();
 
@@ -23,6 +24,7 @@ app.use("/api/threads", threadRoutes);
 app.use("/api", commentRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/notifications", notificationRoutes);
+app.use("/api/admin", adminRoutes);
 
 app.get("/health", (_req, res) => {
   res.status(200).json({ status: "ok" });

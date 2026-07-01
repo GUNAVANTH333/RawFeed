@@ -54,6 +54,7 @@ export class UserService {
         createdAt: true,
         shadowScore: true,
         isBanned: true,
+        role: true,
       },
     });
 
@@ -106,6 +107,26 @@ export class UserService {
         bio: true,
         profilePhoto: true,
         createdAt: true,
+      },
+    });
+  };
+
+  createReport = async (
+    reporterId: string,
+    reportedUserId: string,
+    reason: string,
+    threadId?: string,
+    commentId?: string
+  ) => {
+    if (reporterId === reportedUserId) throw new Error("SELF_REPORT");
+
+    return prisma.report.create({
+      data: {
+        reporterId,
+        reportedUserId,
+        reason,
+        threadId: threadId ?? null,
+        commentId: commentId ?? null,
       },
     });
   };

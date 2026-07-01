@@ -3,10 +3,11 @@
 import { useEffect, useState, use } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { getThread, getComments, createComment, voteComment, deleteThread, deleteComment, updateThread, type ThreadDetail, type Comment, likeThread } from "@/lib/api";
+import { getThread, getComments, createComment, voteComment, deleteThread, deleteComment, updateThread, type ThreadDetail, type Comment, likeThread, reportThread, reportComment } from "@/lib/api";
 import { useAuth } from "@/lib/AuthContext";
 import { bgColors, textColors, getColorIdx } from "@/lib/avatar";
 import { IncognitoIcon } from "@/components/IncognitoIcon";
+import ReportModal from "@/components/ReportModal";
 
 function timeAgo(dateStr: string) {
   const diff = Date.now() - new Date(dateStr).getTime();
@@ -37,6 +38,7 @@ export default function ThreadPage({ params }: { params: Promise<{ id: string }>
   const [editUrl, setEditUrl] = useState("");
   const [replyingTo, setReplyingTo] = useState<string | null>(null);
   const [replyText, setReplyText] = useState("");
+  const [reportTarget, setReportTarget] = useState<{ type: "thread" | "comment"; id: string } | null>(null);
 
   useEffect(() => {
     // Reset state when navigating to a new thread
@@ -320,10 +322,15 @@ export default function ThreadPage({ params }: { params: Promise<{ id: string }>
                 <span className="material-symbols-outlined !text-[18px]">chat_bubble</span>
                 <span className="text-xs font-medium">Reply</span>
               </button>
-              {comment.isMe && (
+              {comment.isMe ? (
                 <button onClick={() => handleDeleteComment(comment.id)} className="flex items-center gap-1.5 hover:text-red-400 transition-colors ml-auto" style={{ color: "var(--text-muted)" }}>
                   <span className="material-symbols-outlined !text-[18px]">delete</span>
                   <span className="text-xs font-medium">Delete</span>
+                </button>
+              ) : user && (
+                <button onClick={() => setReportTarget({ type: "comment", id: comment.id })} className="flex items-center gap-1.5 hover:text-red-400 transition-colors ml-auto" style={{ color: "var(--text-muted)" }}>
+                  <span className="material-symbols-outlined !text-[18px]">flag</span>
+                  <span className="text-xs font-medium">Report</span>
                 </button>
               )}
             </div>
@@ -573,7 +580,7 @@ export default function ThreadPage({ params }: { params: Promise<{ id: string }>
                               </button>
                             </>
                           ) : (
-                            <button onClick={() => { setShowThreadMenu(false); alert("Thread reported. We'll review it shortly."); }} className="w-full flex items-center gap-2 px-4 py-2.5 text-sm hover:bg-red-500/5 transition-colors text-left" style={{ color: "var(--text-primary)" }}>
+                            <button onClick={() => { setShowThreadMenu(false); if (!user) { alert("Please sign in to report."); return; } setReportTarget({ type: "thread", id }); }} className="w-full flex items-center gap-2 px-4 py-2.5 text-sm hover:bg-red-500/5 transition-colors text-left" style={{ color: "var(--text-primary)" }}>
                               <span className="material-symbols-outlined !text-[18px] text-red-400">flag</span> Report Thread
                             </button>
                           )}
@@ -690,6 +697,19 @@ export default function ThreadPage({ params }: { params: Promise<{ id: string }>
             </div>
           </div>
         </footer>
+      )}
+      {reportTarget && (
+        <ReportModal
+          type={reportTarget.type}
+          onClose={() => setReportTarget(null)}
+          onSubmit={async (reason) => {
+            if (reportTarget.type === "thread") {
+              await reportThread(reportTarget.id, reason);
+            } else {
+              await reportComment(reportTarget.id, reason);
+            }
+          }}
+        />
       )}
     </main>
   );

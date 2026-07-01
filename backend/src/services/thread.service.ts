@@ -254,4 +254,12 @@ export class ThreadService {
     const likeCount = await prisma.threadLike.count({ where: { threadId } });
     return { liked: !existing, likeCount };
   };
+
+  getThreadOwnerId = async (threadId: string): Promise<string | null> => {
+    const thread = await prisma.thread.findUnique({
+      where: { id: threadId },
+      select: { creatorId: true },
+    });
+    return thread?.creatorId ?? null;
+  };
 }

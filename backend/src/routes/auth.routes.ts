@@ -19,7 +19,7 @@ router.get(
   "/google/callback",
   passport.authenticate("google", { failureRedirect: `${CLIENT_URL}/login?error=oauth_failed`, session: false }),
   (req: Request, res: Response) => {
-    const user = req.user as { id: string } | undefined;
+    const user = req.user as { id: string; role: string } | undefined;
 
     if (!user) {
       res.redirect(`${CLIENT_URL}/login?error=oauth_failed`);
@@ -27,7 +27,7 @@ router.get(
     }
 
     // Issue our standard JWT cookie — same as normal login
-    generateToken(res, user.id);
+    generateToken(res, user.id, user.role);
 
     // Redirect to home page after successful sign in
     res.redirect(`${CLIENT_URL}/`);

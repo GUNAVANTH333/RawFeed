@@ -270,4 +270,12 @@ export class CommentService {
 
     await prisma.comment.delete({ where: { id: commentId } });
   };
+
+  getCommentOwnerId = async (commentId: string): Promise<string | null> => {
+    const comment = await prisma.comment.findUnique({
+      where: { id: commentId },
+      include: { participant: { select: { userId: true } } },
+    });
+    return comment?.participant.userId ?? null;
+  };
 }
